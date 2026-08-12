@@ -175,4 +175,4 @@ By 0Arsen. Built on Paper's item data-component and Brigadier command APIs.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+GPL-3.0-only — see [LICENSE](LICENSE).

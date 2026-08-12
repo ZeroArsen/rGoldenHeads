@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'dev.zerorsen'
-version = '2.0.0'
+version = '2.0.1'
 
 java {
     toolchain {
@@ -50,9 +50,10 @@ modrinth {
     loaders = ['paper', 'purpur']
     changelog = providers.fileContents(layout.projectDirectory.file('CHANGELOG.md'))
             .asText.getOrElse('See the GitHub release notes.')
-    // Mirrors README.md into the Modrinth description. Relative image links will not
-    // resolve there, so use absolute URLs if you add images.
-    syncBodyFrom = providers.fileContents(layout.projectDirectory.file('README.md'))
+    // The Modrinth page body. Kept separate from README.md because the storefront page
+    // and the repo readme want different content. Relative links will not resolve on
+    // Modrinth, so MODRINTH.md uses absolute URLs only.
+    syncBodyFrom = providers.fileContents(layout.projectDirectory.file('MODRINTH.md'))
             .asText.getOrElse('')
 }
 

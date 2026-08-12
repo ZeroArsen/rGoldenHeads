@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.0.1
+
+### Changed
+- **Relicensed from MIT to GPL-3.0-only.** Copies obtained under 2.0.0 remain MIT-licensed;
+  that grant cannot be withdrawn retroactively.
+- The Modrinth page body now comes from `MODRINTH.md` rather than `README.md`, so the
+  storefront page and the repo readme can say different things.
+
+No functional changes to the plugin.
+
 ## 2.0.0
 
 First public release.

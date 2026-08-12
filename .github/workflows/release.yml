@@ -1,0 +1,45 @@
+name: Release
+
+on:
+  push:
+    tags: [ 'v*' ]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - run: chmod +x ./gradlew
+
+      - name: Build
+        run: ./gradlew build --no-daemon
+
+      - name: Attach jar to the GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/libs/*.jar
+          generate_release_notes: true
+
+      # `secrets` cannot be used in a job-level `if`, so it is mapped to env first.
+      # Forks and token-less repos skip this step instead of failing the release.
+      - name: Publish to Modrinth
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        if: ${{ env.MODRINTH_TOKEN != '' }}
+        run: ./gradlew modrinth --no-daemon

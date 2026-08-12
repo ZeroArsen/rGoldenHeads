@@ -1,0 +1,11 @@
+# Normalise line endings so the repo always stores LF.
+* text=auto
+
+# These must keep LF even when checked out on Windows: the CI runner executes gradlew
+# with bash, and CRLF here produces a "bad interpreter" failure.
+gradlew text eol=lf
+*.sh text eol=lf
+
+gradlew.bat text eol=crlf
+
+*.jar binary

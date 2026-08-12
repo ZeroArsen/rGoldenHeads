@@ -1,0 +1,170 @@
+# rGoldenHeads Configuration
+#
+# Two rules that will save you time:
+#   1. Adding, removing or renaming an item -- or changing its command, aliases or
+#      permission -- needs a full server RESTART. Commands are registered into the
+#      server's command tree once, at startup. /rgoldenheads reload cannot change them.
+#   2. Items already sitting in a player's inventory NEVER change. Every property below
+#      is baked into the item the moment it is given. Reloading changes what the NEXT
+#      /goldenhead hands out, not the one already in someone's hotbar.
+#
+# Text values (display-name, lore, messages) accept either format:
+#   MiniMessage - "<gold>Golden Head</gold> <gray>(tasty)</gray>"      (recommended)
+#   Legacy      - "&6Golden Head &7(tasty)"                            (&#ff8800 works too)
+# A string is treated as legacy as soon as it contains an & colour code; otherwise it is
+# parsed as MiniMessage. Do not mix the two in one string.
+
+# Bump-guard. Do not edit. If this does not match the version the plugin expects, a
+# warning is logged so you know to diff your file against the new default.
+config-version: 1
+
+# Logs every item as it is built on load and reload. Useful when an item is not behaving
+# the way you configured it. Noisy; leave false in production.
+debug: false
+
+# What to do when the player's inventory has no room for the item.
+#   true  - drop the leftovers at the player's feet
+#   false - give nothing and tell the player their inventory is full
+drop-overflow: true
+
+
+# ---------------------------------------------------------------------------
+# Messages
+# ---------------------------------------------------------------------------
+# <item> is replaced with the item's display-name, colours included.
+# Set any message to "" to silence it. Set prefix to "" to remove the tag everywhere.
+messages:
+  prefix: ""
+  players-only: "<red>Only players can receive items."
+  no-permission: "<red>You don't have permission to do that."
+  item-received: "<green>You received <item><green>."
+  inventory-full: "<red>Your inventory is full."
+  inventory-full-dropped: "<yellow>Your inventory was full, so the item dropped at your feet."
+  item-unavailable: "<red>That item is no longer available. Ask an admin to check the configuration."
+  reload-success: "<green>Configuration reloaded."
+  reload-failed: "<red>Reload failed. See the console for details; the previous items are still active."
+  usage: "<yellow>Usage: /<label> reload"
+
+
+# ---------------------------------------------------------------------------
+# Items
+# ---------------------------------------------------------------------------
+# Add as many entries as you like. The key (e.g. golden_head) is the item's ID: it must
+# use only lowercase a-z 0-9 . _ - / characters, it identifies the item internally, and
+# it is written into the item so the plugin can recognise it later.
+#
+# Per-item keys -- everything except command and material may be left out:
+#   enabled           true/false. false = no command, no permission. Default: true
+#   command           the command label, without the slash. REQUIRED, must be unique.
+#   aliases           extra labels for the same command. Must also be unique.
+#   description       shown in /help. Default: "Gives you <id>"
+#   permission        permission node needed. Default: rgoldenheads.give.<id>
+#   display-name      the item's name. Default: the id
+#   lore              list of lore lines. Default: none
+#   material          vanilla item id, e.g. GOLDEN_CARROT or minecraft:golden_apple. REQUIRED
+#   item-model        overrides the rendered model, e.g. minecraft:player_head. Default: unset
+#   head-texture      base64 skin blob (the "value" field from a head database site).
+#                     Only meaningful together with item-model: minecraft:player_head
+#   head-uuid         optional. Leave it out and a stable UUID is derived from the texture,
+#                     which is what you want in almost every case
+#   glint             true/false to force the enchantment shimmer on or off.
+#                     Omit entirely to leave it at the vanilla default
+#   amount            how many are given per command. 1 to the material's stack size. Default: 1
+#   instant           true = swallowed with no eating animation at all. Default: false
+#   eat-seconds       how long eating takes. Vanilla food is 1.6. Ignored when instant is true
+#   animation         NONE, EAT, DRINK, BLOCK, BOW, TRIDENT, CROSSBOW, SPYGLASS, TOOT_HORN,
+#                     BRUSH, BUNDLE, SPEAR. Omit for the vanilla default
+#   nutrition         hunger points restored. Default: 0
+#   saturation        saturation restored. Default: 0.0
+#   can-always-eat    true = edible on a full hunger bar, like a golden apple. Default: true
+#   consume-particles true/false for the eating particles. Omit for the vanilla default
+#   consume-sound     e.g. minecraft:entity.generic.eat. Omit for the vanilla default
+#   cooldown-seconds  use-cooldown after eating. Omit entirely for no cooldown at all
+#   cooldown-group    items sharing a group share one cooldown bar.
+#                     Default: rgoldenheads:<id>, i.e. each item cools down on its own
+#   effect-chance     0.0 to 1.0 probability the effects apply at all. Default: 1.0
+#   effects           list of { type, level, duration } -- see below
+#
+# Effects use human numbers, not internal ones:
+#   type      potion id, e.g. regeneration, absorption, speed, instant_health
+#             (REGENERATION also works -- case and the minecraft: prefix are optional)
+#   level     1 = the plain effect, 2 = II, 3 = III. Starts at 1, not 0
+#   duration  SECONDS. Use -1 for an infinite effect
+#   ambient / particles / icon   optional true/false. Default: false / true / true
+
+items:
+
+  golden_head:
+    enabled: true
+    command: goldenhead
+    description: Gives you a Golden Head
+    permission: rgoldenheads.give.goldenhead
+    display-name: "&6Golden Head &7(&c❤❤❤❤&e❤❤&7)"
+    material: GOLDEN_CARROT
+    item-model: minecraft:player_head
+    head-uuid: befd0365-bdc7-5023-9013-a57583aef725
+    head-texture: "e3RleHR1cmVzOntTS0lOOnt1cmw6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNmZkNTA2MDI2MTFlOGM0ZjkwY2UxYWRhNDhlNjMyY2UyYTFkNTVlZDg0YTRiNWNkYTBhZGJiY2Q5MGY1NTU1OSJ9fX0="
+    eat-seconds: 1.0
+    nutrition: 0
+    saturation: 0.0
+    can-always-eat: true
+    cooldown-seconds: 10.0
+    effects:
+      # Regeneration III for 5s heals 4 red hearts
+      - type: regeneration
+        level: 3
+        duration: 5
+      # Absorption I grants 2 yellow hearts
+      - type: absorption
+        level: 1
+        duration: 120
+
+  instant_golden_head:
+    enabled: true
+    command: instantgoldenhead
+    aliases: [instanthead]
+    description: Gives you an Instant Golden Head
+    permission: rgoldenheads.give.instantgoldenhead
+    display-name: "&bInstant Golden Head"
+    material: GOLDEN_CARROT
+    item-model: minecraft:player_head
+    head-uuid: befd0365-bdc7-5023-9013-a57583aef725
+    head-texture: "e3RleHR1cmVzOntTS0lOOnt1cmw6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNmZkNTA2MDI2MTFlOGM0ZjkwY2UxYWRhNDhlNjMyY2UyYTFkNTVlZDg0YTRiNWNkYTBhZGJiY2Q5MGY1NTU1OSJ9fX0="
+    # instant: true is shorthand for eat-seconds: 0.0 plus animation: NONE
+    instant: true
+    nutrition: 0
+    saturation: 0.0
+    can-always-eat: true
+    cooldown-seconds: 12.0
+    effects:
+      - type: regeneration
+        level: 3
+        duration: 10
+      - type: absorption
+        level: 2
+        duration: 120
+      - type: speed
+        level: 1
+        duration: 5
+
+  custom_golden_apple:
+    enabled: true
+    command: goldenapple
+    aliases: [customgapple]
+    description: Gives you a custom Golden Apple
+    permission: rgoldenheads.give.goldenapple
+    display-name: "&6Golden Apple"
+    material: GOLDEN_APPLE
+    # 1.6s is the vanilla food eat duration, so this eats like a normal golden apple
+    eat-seconds: 1.6
+    nutrition: 0
+    saturation: 0.0
+    can-always-eat: true
+    # No cooldown-seconds key at all = no use cooldown on this item
+    effects:
+      - type: regeneration
+        level: 2
+        duration: 10
+      - type: absorption
+        level: 1
+        duration: 120

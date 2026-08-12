@@ -1,0 +1,61 @@
+plugins {
+    id 'java'
+    id 'com.modrinth.minotaur' version '2.8.7'
+}
+
+group = 'dev.zerorsen'
+version = '2.0.0'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+    maven { url = uri('https://repo.papermc.io/repository/maven-public/') }
+}
+
+dependencies {
+    compileOnly 'io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT'
+}
+
+processResources {
+    def props = [version: project.version]
+    inputs.properties(props)
+    // Scoped to plugin.yml on purpose: expanding every resource would break on the '$'
+    // characters inside config.yml's base64 head textures.
+    filesMatching('plugin.yml') {
+        expand(props)
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 21
+    options.compilerArgs << '-Xlint:deprecation'
+}
+
+// Publishing to Modrinth. Minotaur reads the token from the MODRINTH_TOKEN environment
+// variable itself, so nothing secret belongs in this file. Run with: gradlew modrinth
+// A normal `gradlew build` never touches this task, so a missing token cannot break it.
+modrinth {
+    projectId = 'REPLACE_WITH_MODRINTH_PROJECT_ID'
+    versionNumber = project.version
+    versionName = "rGoldenHeads ${project.version}"
+    versionType = 'release'
+    uploadFile = tasks.jar
+    gameVersions = ['1.21.11']
+    loaders = ['paper', 'purpur']
+    changelog = providers.fileContents(layout.projectDirectory.file('CHANGELOG.md'))
+            .asText.getOrElse('See the GitHub release notes.')
+    // Mirrors README.md into the Modrinth description. Relative image links will not
+    // resolve there, so use absolute URLs if you add images.
+    syncBodyFrom = providers.fileContents(layout.projectDirectory.file('README.md'))
+            .asText.getOrElse('')
+}
+
+tasks.named('modrinth') {
+    dependsOn tasks.named('jar')
+}

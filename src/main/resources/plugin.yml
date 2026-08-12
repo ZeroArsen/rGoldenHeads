@@ -1,0 +1,20 @@
+name: rGoldenHeads
+version: '${version}'
+main: dev.zerorsen.rgoldenheads.RGoldenHeadsPlugin
+api-version: '1.21'
+author: 0Arsen
+description: Fully configurable custom edible items (golden heads, custom golden apples and anything else you define).
+
+# No commands: block on purpose. Every item command comes from config.yml and is
+# registered into the Brigadier tree at startup; declaring them here as well would
+# register each label twice and leave one of them reachable only as /rgoldenheads:<label>.
+
+permissions:
+  rgoldenheads.admin:
+    description: Allows reloading the rGoldenHeads configuration
+    default: op
+  rgoldenheads.give:
+    # Children are registered at runtime, one per enabled item in config.yml, so this
+    # node cannot list them statically. Granting it still grants every item command.
+    description: Allows using every rGoldenHeads item command
+    default: op

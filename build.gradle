@@ -48,8 +48,19 @@ modrinth {
     uploadFile = tasks.jar
     gameVersions = ['1.21.11']
     loaders = ['paper', 'purpur']
-    changelog = providers.fileContents(layout.projectDirectory.file('CHANGELOG.md'))
-            .asText.getOrElse('See the GitHub release notes.')
+    changelog = providers.fileContents(layout.projectDirectory.file('CHANGELOG.md')).asText
+            .map { text ->
+                // Modrinth shows a changelog per version, so upload only the newest section
+                // instead of the whole history. Versions are H2 headings ("## 2.0.1") and the
+                // lookahead stops at the next H2, so "### Changed" subsections stay included.
+                def section = text =~ /(?ms)^##[^\S\n]+.*?(?=^##[^\S\n]|\z)/
+                if (!section.find()) {
+                    return text.trim()
+                }
+                // Drop the version heading; Modrinth already displays the version number.
+                section.group().replaceFirst(/(?m)^##[^\S\n]+.*(?:\R|$)/, '').trim()
+            }
+            .orElse('See the GitHub release notes.')
     // The Modrinth page body. Kept separate from README.md because the storefront page
     // and the repo readme want different content. Relative links will not resolve on
     // Modrinth, so MODRINTH.md uses absolute URLs only.

@@ -41,7 +41,7 @@ tasks.withType(JavaCompile).configureEach {
 // variable itself, so nothing secret belongs in this file. Run with: gradlew modrinth
 // A normal `gradlew build` never touches this task, so a missing token cannot break it.
 modrinth {
-    projectId = 'REPLACE_WITH_MODRINTH_PROJECT_ID'
+    projectId = 'n4TUPak0'
     versionNumber = project.version
     versionName = "rGoldenHeads ${project.version}"
     versionType = 'release'

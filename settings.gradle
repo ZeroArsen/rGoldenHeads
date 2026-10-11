@@ -1,1 +1,7 @@
+plugins {
+    // Lets Gradle download a matching JDK when a toolchain (21 for the build, 25 for the
+    // 26.x smoke-test servers) isn't installed locally.
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
+
 rootProject.name = 'rGoldenHeads'

@@ -1,0 +1,7 @@
+# Test-only plugin loaded by `gradlew smokeTest`. Never shipped.
+name: rGoldenHeadsSmokeTest
+version: '1'
+main: dev.zerorsen.rgoldenheads.smoke.SmokeTestPlugin
+api-version: '1.21.4'
+folia-supported: true
+depend: [rGoldenHeads]

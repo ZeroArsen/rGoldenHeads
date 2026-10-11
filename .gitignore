@@ -4,3 +4,6 @@ build/
 *.iml
 .vscode/
 .claude/
+
+# Local test servers started by run-paper (`gradlew runServer`). The smoke tests use build/.
+run/

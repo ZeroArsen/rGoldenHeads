@@ -1,10 +1,12 @@
 plugins {
     id 'java'
-    id 'com.modrinth.minotaur' version '2.8.7'
+    id 'com.modrinth.minotaur' version '2.10.0'
+    // Only used by the opt-in smoke tests below; never touches `build` or `modrinth`.
+    id 'xyz.jpenilla.run-paper' version '3.1.0'
 }
 
 group = 'dev.zerorsen'
-version = '2.0.1'
+version = '2.1.0'
 
 java {
     toolchain {
@@ -18,7 +20,10 @@ repositories {
 }
 
 dependencies {
-    compileOnly 'io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT'
+    // Compiled against the OLDEST supported API on purpose: a symbol that only exists in a
+    // newer Paper can then never slip into the jar. Newer servers run this bytecode as-is;
+    // `gradlew smokeTest` boots every supported version to prove it.
+    compileOnly 'io.papermc.paper:paper-api:1.21.4-R0.1-SNAPSHOT'
 }
 
 processResources {
@@ -46,8 +51,10 @@ modrinth {
     versionName = "rGoldenHeads ${project.version}"
     versionType = 'release'
     uploadFile = tasks.jar
-    gameVersions = ['1.21.11']
-    loaders = ['paper', 'purpur']
+    // Every version with a Paper build from 1.21.4 on. 26.1 is left out: Paper skipped it.
+    gameVersions = ['1.21.4', '1.21.5', '1.21.6', '1.21.7', '1.21.8', '1.21.9', '1.21.10',
+                    '1.21.11', '26.1.1', '26.1.2', '26.2', '26.3']
+    loaders = ['paper', 'purpur', 'folia']
     changelog = providers.fileContents(layout.projectDirectory.file('CHANGELOG.md')).asText
             .map { text ->
                 // Modrinth shows a changelog per version, so upload only the newest section
@@ -70,4 +77,140 @@ modrinth {
 
 tasks.named('modrinth') {
     dependsOn tasks.named('jar')
+}
+
+// ---------------------------------------------------------------------------
+// Smoke tests: `gradlew smokeTest`
+// ---------------------------------------------------------------------------
+// Boots a real, throwaway server for every version this jar claims to support, loads the
+// plugin next to a small test plugin (src/smokeTest), and fails if anything is off. Opt-in
+// and local only: it downloads each server jar (cached after the first run), and running a
+// server means agreeing to the Minecraft EULA, which the maintainer has done for these local
+// test servers. Never part of `build`, never run in CI.
+
+sourceSets {
+    smokeTest {
+        compileClasspath += sourceSets.main.output
+    }
+}
+
+dependencies {
+    smokeTestCompileOnly 'io.papermc.paper:paper-api:1.21.4-R0.1-SNAPSHOT'
+}
+
+def smokeTestJar = tasks.register('smokeTestJar', Jar) {
+    archiveFileName = 'rGoldenHeads-smoketest.jar'
+    destinationDirectory = layout.buildDirectory.dir('smoke')
+    from sourceSets.smokeTest.output
+}
+
+// [platform, Minecraft version, Java version that server needs]
+def smokeTargets = [
+        ['paper', '1.21.4', 21], ['paper', '1.21.5', 21], ['paper', '1.21.6', 21], ['paper', '1.21.7', 21],
+        ['paper', '1.21.8', 21], ['paper', '1.21.9', 21], ['paper', '1.21.10', 21], ['paper', '1.21.11', 21],
+        ['paper', '26.1.1', 25], ['paper', '26.1.2', 25], ['paper', '26.2', 25], ['paper', '26.3', 25],
+        // Folia at the oldest, a middle and the newest version it has builds for
+        ['folia', '1.21.4', 21], ['folia', '1.21.11', 21], ['folia', '26.2', 25],
+]
+
+// Flat, nether-less, tiny view distance: the checks need a running server, not a world.
+// A non-default port so a real server on this machine can't collide with the tests.
+def smokeServerProperties = [
+        'online-mode=false',
+        'server-port=25599',
+        'level-type=minecraft\\:flat',
+        'generate-structures=false',
+        'allow-nether=false',
+        'view-distance=2',
+        'simulation-distance=2',
+        'spawn-protection=0',
+        'max-players=1',
+].join('\n') + '\n'
+
+def smokeRunDirs = [:]
+def smokeTasks = smokeTargets.collect { target ->
+    def (platform, mcVersion, javaVersion) = target
+    def label = "${platform}-${mcVersion}"
+    def runDir = layout.buildDirectory.dir("smoke/${label}").get().asFile
+    smokeRunDirs[label] = runDir
+
+    tasks.register("smoke${platform.capitalize()}_${mcVersion.replace('.', '_')}", xyz.jpenilla.runpaper.task.RunServer) {
+        group = 'smoke test'
+        description = "Boots ${platform.capitalize()} ${mcVersion} with the plugin and runs the smoke checks."
+        minecraftVersion(mcVersion)
+        if (platform == 'folia') {
+            // folia() lives on a Kotlin companion object without @JvmStatic. Groovy resolves
+            // `DownloadsAPIService.Companion` to the nested class rather than the instance,
+            // so fetch the instance field explicitly.
+            def downloads = xyz.jpenilla.runtask.service.DownloadsAPIService.getField('Companion').get(null)
+            downloadsApiService.set(downloads.folia(project))
+        }
+        runDirectory(runDir)
+        pluginJars(tasks.named('jar').flatMap { it.archiveFile }, smokeTestJar.flatMap { it.archiveFile })
+        javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(javaVersion) }
+        jvmArgs('-Xmx1G')
+        // Agreed by the maintainer for these local, throwaway test servers only.
+        systemProperty('com.mojang.eula.agree', 'true')
+        // The verdict comes from smoke-result.txt, not the exit code. A hang still fails the task.
+        ignoreExitValue = true
+        timeout = java.time.Duration.ofMinutes(8)
+
+        doFirst {
+            // A fresh directory every run, so the plugin writes its bundled default config
+            runDir.deleteDir()
+            runDir.mkdirs()
+            new File(runDir, 'server.properties').text = smokeServerProperties
+            new File(runDir, 'bukkit.yml').text = 'settings:\n  allow-end: false\n'
+            // Keep fifteen servers' worth of console spam out of the Gradle output
+            standardOutput = new FileOutputStream(new File(runDir, 'console.log'))
+            errorOutput = standardOutput
+        }
+        doLast {
+            standardOutput.close()
+        }
+    }
+}
+
+// One server at a time: they share a port and would only fight over the CPU anyway
+smokeTasks.eachWithIndex { task, i ->
+    if (i > 0) {
+        task.configure { mustRunAfter smokeTasks[i - 1] }
+    }
+}
+
+tasks.register('smokeTest') {
+    group = 'verification'
+    description = 'Boots every supported Paper and Folia version with the plugin and checks it works.'
+    dependsOn smokeTasks
+    doLast {
+        def failures = []
+        def width = smokeRunDirs.keySet()*.length().max()
+        println ''
+        println 'Smoke test results'
+        smokeRunDirs.each { label, dir ->
+            def result = new File(dir, 'smoke-result.txt')
+            def lines = result.exists() ? result.readLines() : []
+            def verdict = lines ? lines[0] : 'NO RESULT (server never finished its checks; see console.log)'
+
+            // A stack frame from the plugin anywhere in the log fails the run, even if every check
+            // passed: it means something threw that the checks didn't look at.
+            def log = new File(dir, 'logs/latest.log')
+            def ourFrames = log.exists()
+                    ? log.readLines().count { it.contains('at dev.zerorsen.rgoldenheads.') && !it.contains('.smoke.') }
+                    : 0
+            if (verdict == 'PASS' && ourFrames > 0) {
+                verdict = "FAIL (${ourFrames} rGoldenHeads stack frame(s) in latest.log)"
+            }
+
+            println "  ${label.padRight(width)}  ${verdict}"
+            if (verdict != 'PASS') {
+                failures << label
+                lines.findAll { it.startsWith('FAIL ') }.each { println "      ${it}" }
+            }
+        }
+        if (failures) {
+            throw new GradleException("Smoke test failed on: ${failures.join(', ')}. "
+                    + "Details in build/smoke/<platform>-<version>/console.log")
+        }
+    }
 }

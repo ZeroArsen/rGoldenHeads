@@ -76,7 +76,9 @@ modrinth {
 }
 
 tasks.named('modrinth') {
-    dependsOn tasks.named('jar')
+    // syncBodyFrom alone does nothing: the page body is only pushed by modrinthSyncBody,
+    // so every release also refreshes the page from MODRINTH.md.
+    dependsOn tasks.named('jar'), tasks.named('modrinthSyncBody')
 }
 
 // ---------------------------------------------------------------------------

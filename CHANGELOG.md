@@ -1,5 +1,35 @@
 # Changelog
 
+## 2.1.0
+
+### Added
+- **One jar for Paper 1.21.4 – 26.3 and Folia.** Every supported version is booted and
+  checked by an automated smoke test before release. Servers older than 1.21.4 now refuse to
+  load the plugin with a clear message instead of failing halfway through.
+- **New default Golden Head skin.** Heads now pick a skin by name: `head-skin: modern` (the
+  new default) or `head-skin: classic` (the original look). Add your own under `head-skins:`.
+  Existing configs keep their current look; switch with one line.
+- **`/rgoldenheads give <player|*> <item> [amount]`**, usable from the console so kit and
+  UHC plugins can hand out items. New permission `rgoldenheads.admin.give`, deliberately
+  kept out of `rgoldenheads.give`.
+- **Update checker.** Asks Modrinth once per startup for a newer release that matches your
+  server version, and tells admins (`rgoldenheads.admin.notify`) on join. Disable with
+  `update-checker.enabled: false`.
+- `rgoldenheads.admin` is now a parent node of `.admin.reload`, `.admin.give` and
+  `.admin.notify`, so existing admins keep reload and gain the rest.
+
+### Changed
+- `animation: TRIDENT` works on every version. Before 1.21.11 the trident animation was
+  called `SPEAR`, and the plugin now maps it for you.
+- Giving items is Folia-safe: inventory changes run on the receiving player's own thread.
+
+### Fixed
+- Startup no longer logs "Item '...' was added, but its command will not exist until the
+  server restarts" for every item. That line now only appears for items actually added by
+  a reload.
+- The `drop-overflow: false` description now matches what happens: the items that fit
+  are given, and the rest is discarded.
+
 ## 2.0.1
 
 ### Changed

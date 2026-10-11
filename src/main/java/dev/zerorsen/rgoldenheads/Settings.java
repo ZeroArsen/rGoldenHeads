@@ -15,6 +15,7 @@ public final class Settings {
 
     private volatile boolean debug = false;
     private volatile boolean dropOverflow = true;
+    private volatile boolean updateChecker = true;
 
     public Settings(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -32,6 +33,7 @@ public final class Settings {
 
         this.debug = config.getBoolean("debug", false);
         this.dropOverflow = config.getBoolean("drop-overflow", true);
+        this.updateChecker = config.getBoolean("update-checker.enabled", true);
     }
 
     public boolean debug() {
@@ -40,5 +42,9 @@ public final class Settings {
 
     public boolean dropOverflow() {
         return dropOverflow;
+    }
+
+    public boolean updateChecker() {
+        return updateChecker;
     }
 }

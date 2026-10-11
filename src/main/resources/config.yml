@@ -24,15 +24,24 @@ debug: false
 
 # What to do when the player's inventory has no room for the item.
 #   true  - drop the leftovers at the player's feet
-#   false - give nothing and tell the player their inventory is full
+#   false - give only what fits, discard the rest, and tell the player their inventory is full
 drop-overflow: true
+
+# Once per server start, asks Modrinth (api.modrinth.com) whether a newer rGoldenHeads
+# release exists for your Minecraft version, and tells the console and anyone with
+# rgoldenheads.admin.notify when they join. Nothing is sent except the request itself
+# (which, like any web request, reveals your server's IP to Modrinth). Set to false to
+# disable it entirely.
+update-checker:
+  enabled: true
 
 
 # ---------------------------------------------------------------------------
 # Messages
 # ---------------------------------------------------------------------------
-# <item> is replaced with the item's display-name, colours included.
-# Set any message to "" to silence it. Set prefix to "" to remove the tag everywhere.
+# Placeholders in <angle brackets> are filled in for you: <item> is the item's display-name
+# with its colours, the rest are plain text. A message missing from this list falls back
+# to its default. Set any message to "" to silence it, and prefix to "" to remove the tag.
 messages:
   prefix: ""
   players-only: "<red>Only players can receive items."
@@ -43,7 +52,33 @@ messages:
   item-unavailable: "<red>That item is no longer available. Ask an admin to check the configuration."
   reload-success: "<green>Configuration reloaded."
   reload-failed: "<red>Reload failed. See the console for details; the previous items are still active."
-  usage: "<yellow>Usage: /<label> reload"
+  usage: "<yellow>Usage: /<label> reload | /<label> give {player|*} {item} [amount]"
+  # /rgoldenheads give
+  given-to-player: "<green>Gave <amount>x <item><green> to <player>."
+  given-to-all: "<green>Gave <amount>x <item><green> to <count> online player(s)."
+  player-not-found: "<red>No online player is named <player>."
+  no-players-online: "<red>Nobody is online."
+  unknown-item: "<red>Unknown item '<id>'. Available: <items>"
+  invalid-amount: "<red>The amount must be a whole number from 1 to <max>."
+  # Shown on join to players with rgoldenheads.admin.notify
+  update-available: "<yellow>rGoldenHeads <latest> is available (you have <current>): <url>"
+
+
+# ---------------------------------------------------------------------------
+# Head skins
+# ---------------------------------------------------------------------------
+# Items pick a skin by name with head-skin: <name>. Two are built in:
+#   modern   - the default since 2.1 (source: https://namemc.com/skin/7e3c84ef1342fb4d)
+#   classic  - the look rGoldenHeads shipped with before 2.1
+# To go back to the old look, change head-skin: modern to head-skin: classic on the items
+# below and run /rgoldenheads reload.
+#
+# Add your own skins here and use them by name. texture is the base64 "value" field from a
+# head database site; uuid is optional (a stable one is derived from the texture). Defining
+# modern or classic here replaces the built-in one.
+head-skins:
+  # my_skin:
+  #   texture: "e3RleHR1cmVzOntTS0lOOnt1cmw6Imh0dHA6Ly..."
 
 
 # ---------------------------------------------------------------------------
@@ -63,17 +98,20 @@ messages:
 #   lore              list of lore lines. Default: none
 #   material          vanilla item id, e.g. GOLDEN_CARROT or minecraft:golden_apple. REQUIRED
 #   item-model        overrides the rendered model, e.g. minecraft:player_head. Default: unset
-#   head-texture      base64 skin blob (the "value" field from a head database site).
+#   head-skin         a skin name from head-skins above (built in: modern, classic).
 #                     Only meaningful together with item-model: minecraft:player_head
-#   head-uuid         optional. Leave it out and a stable UUID is derived from the texture,
-#                     which is what you want in almost every case
+#   head-texture      a raw base64 skin blob instead of a named skin; wins over head-skin
+#   head-uuid         optional, with head-texture. Leave it out and a stable UUID is derived
+#                     from the texture, which is what you want in almost every case
 #   glint             true/false to force the enchantment shimmer on or off.
 #                     Omit entirely to leave it at the vanilla default
 #   amount            how many are given per command. 1 to the material's stack size. Default: 1
 #   instant           true = swallowed with no eating animation at all. Default: false
 #   eat-seconds       how long eating takes. Vanilla food is 1.6. Ignored when instant is true
 #   animation         NONE, EAT, DRINK, BLOCK, BOW, TRIDENT, CROSSBOW, SPYGLASS, TOOT_HORN,
-#                     BRUSH, BUNDLE, SPEAR. Omit for the vanilla default
+#                     BRUSH, BUNDLE, SPEAR. Omit for the vanilla default. SPEAR is the spear
+#                     animation only on 1.21.11+; older servers show the trident one for it.
+#                     An unavailable value logs the list your server actually supports
 #   nutrition         hunger points restored. Default: 0
 #   saturation        saturation restored. Default: 0.0
 #   can-always-eat    true = edible on a full hunger bar, like a golden apple. Default: true
@@ -102,8 +140,7 @@ items:
     display-name: "&6Golden Head &7(&c❤❤❤❤&e❤❤&7)"
     material: GOLDEN_CARROT
     item-model: minecraft:player_head
-    head-uuid: befd0365-bdc7-5023-9013-a57583aef725
-    head-texture: "e3RleHR1cmVzOntTS0lOOnt1cmw6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNmZkNTA2MDI2MTFlOGM0ZjkwY2UxYWRhNDhlNjMyY2UyYTFkNTVlZDg0YTRiNWNkYTBhZGJiY2Q5MGY1NTU1OSJ9fX0="
+    head-skin: modern
     eat-seconds: 1.0
     nutrition: 0
     saturation: 0.0
@@ -128,8 +165,7 @@ items:
     display-name: "&bInstant Golden Head"
     material: GOLDEN_CARROT
     item-model: minecraft:player_head
-    head-uuid: befd0365-bdc7-5023-9013-a57583aef725
-    head-texture: "e3RleHR1cmVzOntTS0lOOnt1cmw6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNmZkNTA2MDI2MTFlOGM0ZjkwY2UxYWRhNDhlNjMyY2UyYTFkNTVlZDg0YTRiNWNkYTBhZGJiY2Q5MGY1NTU1OSJ9fX0="
+    head-skin: modern
     # instant: true is shorthand for eat-seconds: 0.0 plus animation: NONE
     instant: true
     nutrition: 0

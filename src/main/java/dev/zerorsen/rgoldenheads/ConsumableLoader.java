@@ -10,10 +10,8 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -54,7 +52,8 @@ public final class ConsumableLoader {
     private ConsumableLoader() {
     }
 
-    public static List<ConsumableSpec> load(ConfigurationSection items, Logger log, boolean debug) {
+    public static List<ConsumableSpec> load(ConfigurationSection items, Map<String, HeadSkins.HeadSkin> skins,
+                                            Logger log, boolean debug) {
         List<ConsumableSpec> specs = new ArrayList<>();
         if (items == null) {
             log.warning("config.yml has no 'items' section, so no items are available. "
@@ -92,7 +91,7 @@ public final class ConsumableLoader {
                 continue;
             }
 
-            ConsumableSpec spec = loadOne(id, section, claimedLabels, log);
+            ConsumableSpec spec = loadOne(id, section, claimedLabels, skins, log);
             if (spec != null) {
                 specs.add(spec);
                 if (debug) {
@@ -108,7 +107,8 @@ public final class ConsumableLoader {
         return specs;
     }
 
-    private static ConsumableSpec loadOne(String id, ConfigurationSection s, Set<String> claimedLabels, Logger log) {
+    private static ConsumableSpec loadOne(String id, ConfigurationSection s, Set<String> claimedLabels,
+                                          Map<String, HeadSkins.HeadSkin> skins, Logger log) {
         String path = "items." + id;
 
         String command = s.getString("command", "");
@@ -159,16 +159,13 @@ public final class ConsumableLoader {
 
         Key itemModel = optionalKey(s.getString("item-model"), path, "item-model", log);
 
-        String skinTexture = s.getString("head-texture");
-        UUID skinUuid = null;
-        if (skinTexture != null && !skinTexture.isBlank()) {
-            skinUuid = skinProfile(skinTexture, s.getString("head-uuid"), itemModel, path, log);
-            if (skinUuid == null) {
-                skinTexture = null;
-            }
-        } else {
-            skinTexture = null;
+        HeadSkins.HeadSkin skin = headSkin(s, skins, path, log);
+        if (skin != null && (itemModel == null || !"minecraft:player_head".equals(itemModel.asString()))) {
+            log.warning(path + " has a head skin but item-model is not minecraft:player_head, "
+                    + "so the skin will not be visible.");
         }
+        String skinTexture = skin == null ? null : skin.texture();
+        UUID skinUuid = skin == null ? null : skin.uuid();
 
         Boolean glint = s.isSet("glint") ? s.getBoolean("glint") : null;
 
@@ -248,35 +245,35 @@ public final class ConsumableLoader {
         return material;
     }
 
-    /** Returns the profile UUID to use, or null when the texture is unusable. */
-    private static UUID skinProfile(String texture, String rawUuid, Key itemModel, String path, Logger log) {
-        try {
-            byte[] decoded = Base64.getDecoder().decode(texture);
-            if (!new String(decoded, StandardCharsets.UTF_8).contains("textures")) {
-                log.warning(path + ".head-texture decodes but does not look like a skin blob. "
-                        + "Applying it anyway; the head may render as a default skin.");
+    /**
+     * Resolves the item's skin, or null for none. An explicit head-texture wins over a named
+     * head-skin, which keeps every 2.0.x config (written with raw textures) working unchanged.
+     */
+    private static HeadSkins.HeadSkin headSkin(ConfigurationSection s, Map<String, HeadSkins.HeadSkin> skins,
+                                               String path, Logger log) {
+        String texture = s.getString("head-texture");
+        String skinName = s.getString("head-skin");
+
+        if (texture != null && !texture.isBlank()) {
+            if (skinName != null && !skinName.isBlank()) {
+                log.warning(path + " sets both head-texture and head-skin; head-texture is used.");
             }
-        } catch (IllegalArgumentException e) {
-            log.warning(path + ".head-texture is not valid base64, so this item has no skin. "
-                    + "Copy the 'value' field from a head database, not the whole JSON.");
+            if (!HeadSkins.isUsableTexture(texture, path + ".head-texture", log)) {
+                return null;
+            }
+            return new HeadSkins.HeadSkin(texture,
+                    HeadSkins.uuid(s.getString("head-uuid"), texture, path + ".head-uuid", log));
+        }
+
+        if (skinName == null || skinName.isBlank()) {
             return null;
         }
-
-        if (itemModel == null || !"minecraft:player_head".equals(itemModel.asString())) {
-            log.warning(path + " sets head-texture but item-model is not minecraft:player_head, "
-                    + "so the skin will not be visible.");
+        HeadSkins.HeadSkin skin = skins.get(skinName.toLowerCase(Locale.ROOT));
+        if (skin == null) {
+            log.warning(path + ".head-skin '" + skinName + "' is not a known skin, so this item has no skin. "
+                    + "Available: " + String.join(", ", skins.keySet()));
         }
-
-        if (rawUuid != null && !rawUuid.isBlank()) {
-            try {
-                return UUID.fromString(rawUuid);
-            } catch (IllegalArgumentException e) {
-                log.warning(path + ".head-uuid '" + rawUuid
-                        + "' is not a valid UUID; deriving one from the texture instead.");
-            }
-        }
-        // Deriving from the texture keeps it stable across restarts, so identical items stack.
-        return UUID.nameUUIDFromBytes(texture.getBytes(StandardCharsets.UTF_8));
+        return skin;
     }
 
     private static Key optionalKey(String raw, String path, String key, Logger log) {
@@ -295,11 +292,22 @@ public final class ConsumableLoader {
         if (raw == null || raw.isBlank()) {
             return null;
         }
+        String name = raw.toUpperCase(Locale.ROOT);
         try {
-            return ItemUseAnimation.valueOf(raw.toUpperCase(Locale.ROOT));
+            return ItemUseAnimation.valueOf(name);
         } catch (IllegalArgumentException e) {
-            log.warning(path + ".animation '" + raw + "' is not valid, so the vanilla default is used. "
-                    + "Valid values: " + Arrays.toString(ItemUseAnimation.values()));
+            // 1.21.11 renamed the trident animation from SPEAR to TRIDENT. Servers before that
+            // have no TRIDENT, but their SPEAR *is* the trident animation, so TRIDENT behaves
+            // the same on every supported version.
+            if (name.equals("TRIDENT")) {
+                try {
+                    return ItemUseAnimation.valueOf("SPEAR");
+                } catch (IllegalArgumentException ignored) {
+                    // fall through to the warning
+                }
+            }
+            log.warning(path + ".animation '" + raw + "' is not available on this server, so the vanilla "
+                    + "default is used. Valid values here: " + Arrays.toString(ItemUseAnimation.values()));
             return null;
         }
     }

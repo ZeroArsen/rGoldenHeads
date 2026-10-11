@@ -11,6 +11,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public final class RGoldenHeadsPlugin extends JavaPlugin {
@@ -20,7 +21,12 @@ public final class RGoldenHeadsPlugin extends JavaPlugin {
     private final ConsumableRegistry registry = new ConsumableRegistry();
     private final Settings settings = new Settings(this);
     private final Messages messages = new Messages(this);
+    private final ItemGiver giver = new ItemGiver(this, settings, messages);
     private final List<String> ownedPermissions = new ArrayList<>();
+
+    // The items the command tree was built from. Null until startup finishes, so the first
+    // load doesn't report every item as "added since startup".
+    private volatile Set<String> commandIds;
 
     @Override
     public void onEnable() {
@@ -32,6 +38,7 @@ public final class RGoldenHeadsPlugin extends JavaPlugin {
         // Taken once: the command tree is built from this list and cannot gain or lose
         // labels until the next server start, however often the config is reloaded.
         List<ConsumableSpec> startupSpecs = registry.all();
+        commandIds = Set.copyOf(registry.ids());
         if (startupSpecs.isEmpty()) {
             getLogger().warning("No usable items in config.yml, so only /rgoldenheads is registered.");
         }
@@ -40,12 +47,18 @@ public final class RGoldenHeadsPlugin extends JavaPlugin {
         getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
             Commands commands = event.registrar();
             commands.register("rgoldenheads", "rGoldenHeads admin command", List.of("rgh"),
-                    new RGoldenHeadsCommand(this, messages));
+                    new RGoldenHeadsCommand(this, registry, giver, messages));
             for (ConsumableSpec spec : startupSpecs) {
                 commands.register(spec.commandName(), spec.description(), spec.aliases(),
-                        new GiveConsumableCommand(spec.id(), spec.permission(), settings, messages, registry));
+                        new GiveConsumableCommand(spec.id(), spec.permission(), giver, messages, registry));
             }
         });
+
+        if (settings.updateChecker()) {
+            UpdateChecker updateChecker = new UpdateChecker(this, settings, messages);
+            getServer().getPluginManager().registerEvents(updateChecker, this);
+            updateChecker.checkAsync();
+        }
 
         getLogger().info("rGoldenHeads enabled with " + startupSpecs.size() + " item(s).");
     }
@@ -56,6 +69,11 @@ public final class RGoldenHeadsPlugin extends JavaPlugin {
         PluginManager pluginManager = getServer().getPluginManager();
         ownedPermissions.forEach(pluginManager::removePermission);
         ownedPermissions.clear();
+    }
+
+    /** The live item set. Public for the smoke-test harness; not a supported API. */
+    public ConsumableRegistry registry() {
+        return registry;
     }
 
     /** Returns false and keeps the previously loaded items when the new config is unusable. */
@@ -73,14 +91,17 @@ public final class RGoldenHeadsPlugin extends JavaPlugin {
             return false;
         }
 
-        Set<String> before = Set.copyOf(registry.ids());
         messages.load();
-        registry.replaceAll(ConsumableLoader.load(items, getLogger(), settings.debug()));
+        Map<String, HeadSkins.HeadSkin> skins = HeadSkins.load(config.getConfigurationSection("head-skins"), getLogger());
+        registry.replaceAll(ConsumableLoader.load(items, skins, getLogger(), settings.debug()));
 
-        registry.ids().stream()
-                .filter(id -> !before.contains(id))
-                .forEach(id -> getLogger().info("Item '" + id + "' was added, but its command will not "
-                        + "exist until the server restarts."));
+        Set<String> registered = commandIds;
+        if (registered != null) {
+            registry.ids().stream()
+                    .filter(id -> !registered.contains(id))
+                    .forEach(id -> getLogger().info("Item '" + id + "' was added, but its command will not "
+                            + "exist until the server restarts."));
+        }
 
         return true;
     }

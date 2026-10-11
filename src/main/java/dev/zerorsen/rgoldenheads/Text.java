@@ -4,8 +4,12 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
+import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
@@ -22,8 +26,6 @@ public final class Text {
     // deliberately does not match, so that text stays on the MiniMessage path.
     private static final Pattern LEGACY_CODE = Pattern.compile("&(?:[0-9A-Fa-fK-Ok-oRr]|#[0-9A-Fa-f]{6})");
 
-    private static final String ITEM_PLACEHOLDER = "<item>";
-
     private Text() {
     }
 
@@ -35,16 +37,28 @@ public final class Text {
         return isLegacy(raw) ? LEGACY.deserialize(raw) : MiniMessage.miniMessage().deserialize(raw);
     }
 
-    /**
-     * Parse with a single &lt;item&gt; placeholder. MiniMessage gets a real component
-     * placeholder; the legacy path has no tag system, so the replacement is serialised
-     * back to legacy text first to keep its colours.
-     */
+    /** Parse with a single &lt;item&gt; placeholder. */
     public static Component parse(String raw, Component item) {
+        return parse(raw, Map.of("item", item));
+    }
+
+    /**
+     * Parse with named &lt;placeholders&gt;. MiniMessage gets real component placeholders; the
+     * legacy path has no tag system, so each value is serialised back to legacy text first to
+     * keep its colours. Values are components, so plain text passed in as
+     * {@code Component.text(...)} is never itself parsed as markup.
+     */
+    public static Component parse(String raw, Map<String, Component> placeholders) {
         if (isLegacy(raw)) {
-            return LEGACY.deserialize(raw.replace(ITEM_PLACEHOLDER, LEGACY.serialize(item)));
+            String replaced = raw;
+            for (Map.Entry<String, Component> entry : placeholders.entrySet()) {
+                replaced = replaced.replace("<" + entry.getKey() + ">", LEGACY.serialize(entry.getValue()));
+            }
+            return LEGACY.deserialize(replaced);
         }
-        return MiniMessage.miniMessage().deserialize(raw, Placeholder.component("item", item));
+        List<TagResolver> resolvers = new ArrayList<>();
+        placeholders.forEach((name, value) -> resolvers.add(Placeholder.component(name, value)));
+        return MiniMessage.miniMessage().deserialize(raw, TagResolver.resolver(resolvers));
     }
 
     /** Lore renders italic by default in vanilla; only override when the author didn't say. */

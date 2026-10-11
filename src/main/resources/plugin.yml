@@ -1,8 +1,12 @@
 name: rGoldenHeads
 version: '${version}'
 main: dev.zerorsen.rgoldenheads.RGoldenHeadsPlugin
-api-version: '1.21'
+# Three-part on purpose: servers older than 1.21.4 refuse to load the plugin with a clear
+# "Unsupported API version" instead of failing halfway through enabling.
+api-version: '1.21.4'
+folia-supported: true
 author: 0Arsen
+website: https://modrinth.com/project/n4TUPak0
 description: Fully configurable custom edible items (golden heads, custom golden apples and anything else you define).
 
 # No commands: block on purpose. Every item command comes from config.yml and is
@@ -11,7 +15,22 @@ description: Fully configurable custom edible items (golden heads, custom golden
 
 permissions:
   rgoldenheads.admin:
-    description: Allows reloading the rGoldenHeads configuration
+    description: Grants every rGoldenHeads admin permission
+    default: op
+    children:
+      rgoldenheads.admin.reload: true
+      rgoldenheads.admin.give: true
+      rgoldenheads.admin.notify: true
+  rgoldenheads.admin.reload:
+    description: Allows /rgoldenheads reload
+    default: op
+  rgoldenheads.admin.give:
+    # Deliberately NOT a child of rgoldenheads.give: that node is often granted to ordinary
+    # players for their own items, and must not quietly let them give items to others.
+    description: Allows /rgoldenheads give to hand items to any player, including from console
+    default: op
+  rgoldenheads.admin.notify:
+    description: Shows the update-available message on join
     default: op
   rgoldenheads.give:
     # Children are registered at runtime, one per enabled item in config.yml, so this

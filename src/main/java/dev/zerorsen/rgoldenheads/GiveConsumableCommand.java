@@ -4,9 +4,6 @@ import io.papermc.paper.command.brigadier.BasicCommand;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
-
-import java.util.Map;
 
 public final class GiveConsumableCommand implements BasicCommand {
 
@@ -17,15 +14,15 @@ public final class GiveConsumableCommand implements BasicCommand {
     // tab-completion visibility. The give itself re-checks the live spec below.
     private final String permission;
 
-    private final Settings settings;
+    private final ItemGiver giver;
     private final Messages messages;
     private final ConsumableRegistry registry;
 
-    public GiveConsumableCommand(String itemId, String permission, Settings settings,
+    public GiveConsumableCommand(String itemId, String permission, ItemGiver giver,
                                  Messages messages, ConsumableRegistry registry) {
         this.itemId = itemId;
         this.permission = permission;
-        this.settings = settings;
+        this.giver = giver;
         this.messages = messages;
         this.registry = registry;
     }
@@ -52,20 +49,7 @@ public final class GiveConsumableCommand implements BasicCommand {
             return;
         }
 
-        Map<Integer, ItemStack> leftover = player.getInventory().addItem(ItemBuilder.build(spec));
-        if (!leftover.isEmpty()) {
-            if (!settings.dropOverflow()) {
-                messages.send(player, messages.inventoryFull());
-                return;
-            }
-            for (ItemStack overflow : leftover.values()) {
-                player.getWorld().dropItemNaturally(player.getLocation(), overflow);
-            }
-            messages.send(player, messages.inventoryFullDropped());
-            return;
-        }
-
-        messages.send(player, messages.itemReceived(spec.displayName()));
+        giver.give(player, spec, 0);
     }
 
     @Override

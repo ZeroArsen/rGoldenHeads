@@ -1,11 +1,12 @@
 # rGoldenHeads
 
-Adds the Golden Heads feature compatible with MCPvP/McTiers.com, and ShieldlessUHC.
+Golden Heads, Light Apples and UHC-style crafting for modern Paper, compatible with MCPvP and
+ShieldlessUHC. Every item and recipe is configurable.
 
-An edible player head that trades an inventory slot for burst regeneration and
-absorption — the healing item that defines UHC and tiering PvP. Every property of every
-item is a config entry, so you can match your server's ruleset instead of the numbers
-someone else hardcoded.
+The healing kit that defines UHC and tiering PvP: an edible player head that trades an
+inventory slot for burst regeneration and absorption, cheap Light Apples, and the classic
+crafting recipes, all in one plugin. Every value is a config entry, so you can match your
+server's ruleset instead of the numbers someone else hardcoded.
 
 **One jar for Paper 1.21.4 – 26.3, Folia included.**
 
@@ -19,7 +20,25 @@ someone else hardcoded.
 
 All three are edible on a full hunger bar and restore no hunger or saturation.
 
-## Fully configurable
+## Crafting
+
+| Recipe | Makes |
+|---|---|
+| Player head surrounded by 8 gold ingots | Golden Head (or the Instant one, your choice) |
+| Apple with 4 gold ingots in a plus | Light Apple: a normal golden apple for half the gold |
+| Golden apple surrounded by 8 gold blocks | the vanilla Enchanted Golden Apple |
+
+- **Optional head drops:** dying players drop their own skinned head, ready to craft. Every
+  death, or PvP kills only.
+- **Every recipe is yours to change:** shape, ingredients, result, amount, shaped or
+  shapeless, item tags, your own plugin items as ingredients, and an optional permission.
+- **Recipe book support:** recipes are unlocked automatically and click-to-craft. Crafters
+  work too.
+- **No exploits:** a Golden Head is never mistaken for a golden carrot, and a Custom Golden
+  Apple can't be turned into a Notch apple.
+- **Reload live:** recipes are added, changed or removed with `/rgoldenheads reload`.
+
+## Fully configurable items
 
 - **Two head skins built in.** `modern` is the default, and `classic` brings back the
   original look with one line (`head-skin: classic`). You can also add your own.
@@ -35,8 +54,8 @@ All three are edible on a full hunger bar and restore no hunger or saturation.
   ```
 
 - **MiniMessage or `&` codes**: write whichever you already use.
-- **Reload live** with `/rgoldenheads reload`. A bad value never takes the server down: it's
-  logged with the exact config path and skipped, so one broken item can't stop the rest.
+- **A bad value never takes the server down:** it's logged with the exact config path and
+  skipped, so one broken item or recipe can't stop the rest.
 
 ## Commands
 
@@ -61,6 +80,9 @@ hand items out. Grant `rgoldenheads.give` to allow every item for self-use, or
 Every supported version is booted and checked automatically before each release. An
 optional update check asks Modrinth once per startup for a newer build matching your server
 version; turn it off with `update-checker.enabled: false`.
+
+**Upgrading?** Your existing config keeps working and nothing changes until you copy the new
+`player-heads`, `recipe-book` and `recipes` sections from the default config.
 
 Source, docs and issues: https://github.com/ZeroArsen/rGoldenHeads · GPL-3.0-only
 

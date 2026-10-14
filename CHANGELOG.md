@@ -1,5 +1,33 @@
 # Changelog
 
+## 2.2.0
+
+### Added
+- **Crafting.** Four recipes ship in the new `recipes:` section:
+  - **Golden Head**: a player head surrounded by 8 gold ingots.
+  - **Instant Golden Head**: the same grid, off by default; enable it instead of the Golden
+    Head recipe if you prefer instant heads.
+  - **Light Apple**: an apple with 4 gold ingots in a plus makes a normal golden apple.
+    Optionally renamed, e.g. "Light Golden Apple".
+  - **Enchanted Golden Apple**: a golden apple surrounded by 8 gold blocks makes the vanilla
+    Notch apple.
+- **Every recipe is configurable:** result (your items or any vanilla item), amount, shape,
+  shaped or shapeless, ingredient lists, item tags, your own items as ingredients, and an
+  optional permission. Recipes reload live with `/rgoldenheads reload`.
+- **Recipe book:** recipes are unlocked on join and are click-to-craft (`recipe-book.unlock-on-join`).
+  Crafters work too.
+- **Player head drops** (`player-heads.drop-on-death`, off by default): a dying player drops
+  their own skinned head. `only-player-kills` limits it to PvP kills.
+- Recipe config is validated like items: duplicate grids, collisions with vanilla recipes,
+  unknown ingredients and unmapped shape characters are logged with their config path.
+
+### Changed
+- Your items can't be mistaken for their plain material in rGoldenHeads recipes: a Custom
+  Golden Apple is not a golden apple and a Golden Head is not a golden carrot.
+- `config-version` is now `2`. Existing configs keep working unchanged: until you copy the new
+  `player-heads`, `recipe-book` and `recipes` sections from the default config, heads don't
+  drop and no recipes are added. The startup warning tells you so.
+
 ## 2.1.0
 
 ### Added

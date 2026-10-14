@@ -1,13 +1,15 @@
 # rGoldenHeads
 
-Configurable custom consumables for Paper and Folia **1.21.4 – 26.3**: golden heads, custom
-golden apples, and anything else you care to define.
+The UHC healing kit for Paper and Folia **1.21.4 – 26.3**: Golden Heads, Light Apples,
+UHC-style crafting and player head drops, compatible with MCPvP and ShieldlessUHC.
 
-Every item is a config entry. You choose its material, skin, name, lore, eating speed,
-cooldown and potion effects, and the plugin registers a command for it. Nothing is
-hardcoded, so you can ship a completely different set of items without touching Java.
+Every item and every recipe is a config entry. You choose an item's material, skin, name,
+lore, eating speed, cooldown and potion effects, and the plugin registers a command for it.
+Recipes take any shape and ingredients you like. Nothing is hardcoded, so you can ship a
+completely different set of items without touching Java.
 
-Out of the box you get the three items below. Delete them, retune them, or add your own.
+Out of the box you get the three items and four recipes below. Delete them, retune them, or
+add your own.
 
 ## Requirements
 
@@ -41,6 +43,79 @@ All three are edible on a full hunger bar and restore no hunger or saturation.
 The heads are a `GOLDEN_CARROT` re-skinned to a player head via the `item_model` and
 `profile` data components, not a real `PLAYER_HEAD`. A `PLAYER_HEAD` is a block item, so
 right-clicking a block would place it instead of eating it.
+
+## Crafting
+
+| Recipe | Grid | Result | Default |
+|---|---|---|---|
+| `golden_head` | a player head surrounded by 8 gold ingots | Golden Head | on |
+| `instant_golden_head` | the same grid | Instant Golden Head | off |
+| `light_apple` | an apple with a gold ingot on each side (4 in a plus) | a normal golden apple | on |
+| `enchanted_golden_apple` | a golden apple surrounded by 8 gold blocks | the vanilla Enchanted Golden Apple | on |
+
+The vanilla 8-ingot golden apple recipe keeps working next to the Light Apple. Recipes are
+unlocked in players' recipe books, work in crafters, and can be added, changed or removed
+with `/rgoldenheads reload`; no restart needed.
+
+The two head recipes share a grid, and two recipes with the same grid can't both work, so
+`instant_golden_head` ships disabled. To hand out Instant Golden Heads instead, disable
+`golden_head` and enable `instant_golden_head`.
+
+A Light Apple is a plain golden apple, so it stacks with the ones players already have. Give
+it a `display-name` (e.g. `"<gold>Light Golden Apple"`) to tell them apart; renamed apples
+then only stack with each other.
+
+```yaml
+recipes:
+  golden_head:
+    result: rgoldenheads:golden_head   # an item from items:, or a vanilla item like golden_apple
+    amount: 1
+    permission: ""                      # optional; empty = anyone may craft it
+    shape:
+      - "GGG"
+      - "GHG"
+      - "GGG"
+    ingredients:
+      G: gold_ingot
+      H: player_head
+```
+
+| Key | Default | Meaning |
+|---|---|---|
+| `enabled` | `true` | `false` removes the recipe. |
+| `result` | — | **Required.** `rgoldenheads:<item id>` for one of your items, or a vanilla item id. |
+| `amount` | `1` | How many one craft makes, up to the stack size. |
+| `display-name`, `lore` | vanilla | Vanilla results only. Rename the result or add lore. |
+| `permission` | none | Node needed to craft it. Players without it get no result, and the recipe is hidden from their recipe book. An undeclared node defaults to op. |
+| `shape` | — | Up to 3 rows of up to 3 characters, all the same length. A space is an empty slot. |
+| `ingredients` | — | What each shape character means. |
+| `shapeless` | `false` | `true` = `ingredients` is a plain list and placement doesn't matter. |
+
+An ingredient is a vanilla item (`gold_ingot`), a list meaning any one of them
+(`[gold_ingot, gold_block]`), an item tag (`"#minecraft:planks"`, quoted because `#` starts a
+YAML comment), or one of your items (`rgoldenheads:golden_head`).
+
+The server matches crafting by material alone, and a Golden Head is a golden carrot
+underneath. rGoldenHeads closes that gap for its own recipes:
+
+- an `rgoldenheads:` ingredient only accepts the real item, not the plain material;
+- a plain-material ingredient never accepts one of your items. A Custom Golden Apple can't
+  be turned into an Enchanted Golden Apple.
+
+Grids that collide (with each other or with a vanilla recipe) are reported in the console at
+load. A recipe with a `permission` can't be crafted in a crafter, which has no player to
+check it against.
+
+## Player heads
+
+```yaml
+player-heads:
+  drop-on-death: false      # true = a dying player drops their own head, wearing their skin
+  only-player-kills: false  # true = only when another player made the kill
+```
+
+The dropped head is a real player head named after the player, ready to craft into a Golden
+Head. With `keepInventory` on, the head still drops.
 
 ## Head skins
 
@@ -82,12 +157,22 @@ as soon as it contains an `&` colour code; otherwise it is parsed as MiniMessage
 
 | Key | Default | Meaning |
 |---|---|---|
-| `config-version` | `1` | Bump-guard. Don't edit; a mismatch just logs a warning telling you to diff your file. |
+| `config-version` | `2` | Bump-guard. Don't edit; a mismatch just logs a warning telling you to diff your file. |
 | `debug` | `false` | Logs every item as it is built. Use it when an item isn't behaving as configured. |
 | `drop-overflow` | `true` | Inventory full: `true` drops the rest at the player's feet; `false` gives only what fits and says so. |
 | `update-checker.enabled` | `true` | Checks Modrinth once per startup for a newer release. See [Update checker](#update-checker). |
 | `messages.*` | — | Every chat string. Placeholders like `<item>` and `<player>` are filled in. Set one to `""` to silence it; a missing one falls back to its default. |
 | `head-skins.*` | none | Your own named skins, on top of the built-in `modern` and `classic`. |
+| `player-heads.drop-on-death` | `false` | Dying players drop their own head. See [Player heads](#player-heads). |
+| `player-heads.only-player-kills` | `false` | Limit head drops to PvP kills. |
+| `recipe-book.unlock-on-join` | `true` | Shows the recipes a player may craft in their recipe book. |
+| `recipes.*` | four recipes | See [Crafting](#crafting). |
+
+**Upgrading from 2.1 or older?** Your config has no `player-heads`, `recipe-book` or
+`recipes` section, so nothing about your server's gameplay changes: heads don't drop and no
+custom recipes exist. The console reminds you on startup. Copy those sections from the
+[default config](src/main/resources/config.yml), set `config-version: 2`, and run
+`/rgoldenheads reload`.
 
 ### Per-item keys
 
@@ -239,8 +324,12 @@ versions, one after another. Each run loads the plugin next to a small test plug
 
 - every default item builds with exactly the expected data components;
 - permissions and commands register, and the commands reply correctly;
-- a deliberately broken config is contained: bad entries are skipped and the good items
-  survive.
+- every default recipe registers, each grid crafts the expected recipe, and the vanilla
+  golden apple recipe still works;
+- plugin items and plain materials can't stand in for each other in a recipe;
+- a dropped player head carries the player's profile;
+- a deliberately broken config is contained: bad items and recipes are skipped, the good
+  ones survive, and a reload leaves no stale recipes behind.
 
 It prints a pass/fail table and fails if any version fails or if the plugin threw anywhere
 in a server's log.
@@ -266,6 +355,13 @@ The smoke tests can't see the client or eat anything. Before a release, on at le
 4. The instant head has no eating animation, and the apple has no cooldown.
 5. The two heads have separate cooldowns, so eating one doesn't block the other.
 6. `/rgoldenheads give <you> golden_head 100` fills your inventory and handles the overflow.
+7. Every default recipe crafts by hand, by shift-click and from the recipe book.
+8. A Custom Golden Apple in the Enchanted Golden Apple grid gives no result.
+9. A recipe `permission` hides the result from players without it.
+10. With `drop-on-death: true`, `/kill` drops your skinned head, also with `keepInventory`;
+    `only-player-kills: true` stops that.
+11. Editing a recipe and running `/rgoldenheads reload` applies without a restart.
+12. A crafter crafts a Light Apple.
 
 ## Credits
 

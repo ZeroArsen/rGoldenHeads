@@ -11,7 +11,10 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.inventory.ItemStack;
 
-/** Drops a dead player's own head, wearing their skin, when player-heads.drop-on-death is on. */
+/**
+ * Drops a dead player's own head, wearing their skin, when player-heads.drop-on-death is on,
+ * or sets it on a {@link HeadPole} when that's enabled and there's room.
+ */
 public final class PlayerHeadDrops implements Listener {
 
     private final Settings settings;
@@ -35,6 +38,11 @@ public final class PlayerHeadDrops implements Listener {
         Player player = event.getPlayer();
         Player killer = player.getKiller();
         if (settings.onlyPlayerKills() && (killer == null || killer.equals(player))) {
+            return;
+        }
+
+        // The death event runs on the thread that owns the player, which owns this spot too
+        if (settings.headPole() && HeadPole.place(player.getLocation(), player.getPlayerProfile(), settings.poleMaterial())) {
             return;
         }
 

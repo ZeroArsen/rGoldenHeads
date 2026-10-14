@@ -14,6 +14,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -98,6 +99,25 @@ public final class RecipeLoader {
         }
 
         return specs;
+    }
+
+    /**
+     * Parses disabled-vanilla-recipes into minecraft: keys. Whether each one is a real recipe is
+     * only known when it is removed, so {@link RecipeManager} reports unknown ids.
+     */
+    public static List<NamespacedKey> vanillaRecipeKeys(List<String> raw, Logger log) {
+        Set<NamespacedKey> keys = new LinkedHashSet<>();
+        for (String entry : raw) {
+            String value = entry.trim().toLowerCase(Locale.ROOT);
+            NamespacedKey key = NamespacedKey.fromString(value);
+            if (key == null || !key.getNamespace().equals(NamespacedKey.MINECRAFT)) {
+                log.warning("disabled-vanilla-recipes: '" + entry + "' is not a vanilla recipe id "
+                        + "(expected something like golden_apple), so it was ignored.");
+                continue;
+            }
+            keys.add(key);
+        }
+        return List.copyOf(keys);
     }
 
     private static RecipeSpec loadOne(String id, String path, ConfigurationSection s,

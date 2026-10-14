@@ -107,7 +107,8 @@ public final class RGoldenHeadsPlugin extends JavaPlugin {
         Map<String, HeadSkins.HeadSkin> skins = HeadSkins.load(config.getConfigurationSection("head-skins"), getLogger());
         registry.replaceAll(ConsumableLoader.load(items, skins, getLogger(), settings.debug()));
         // After the items: recipe results and plugin-item ingredients are looked up in the registry
-        recipes.apply(RecipeLoader.load(config.getConfigurationSection("recipes"), registry, getLogger(), settings.debug()));
+        recipes.apply(RecipeLoader.load(config.getConfigurationSection("recipes"), registry, getLogger(), settings.debug()),
+                RecipeLoader.vanillaRecipeKeys(config.getStringList("disabled-vanilla-recipes"), getLogger()));
 
         Set<String> registered = commandIds;
         if (registered != null) {

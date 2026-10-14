@@ -1,7 +1,9 @@
 package dev.zerorsen.rgoldenheads.smoke;
 
+import com.destroystokyo.paper.profile.PlayerProfile;
 import dev.zerorsen.rgoldenheads.ConsumableRegistry;
 import dev.zerorsen.rgoldenheads.ConsumableSpec;
+import dev.zerorsen.rgoldenheads.HeadPole;
 import dev.zerorsen.rgoldenheads.ItemBuilder;
 import dev.zerorsen.rgoldenheads.PlayerHeadDrops;
 import dev.zerorsen.rgoldenheads.RecipeManager;
@@ -17,8 +19,14 @@ import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Keyed;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.World;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
+import org.bukkit.block.Skull;
+import org.bukkit.block.data.Rotatable;
 import org.bukkit.inventory.Recipe;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -59,6 +67,8 @@ public final class SmokeTestPlugin extends JavaPlugin implements Listener {
                     + "OGM0ZjkwY2UxYWRhNDhlNjMyY2UyYTFkNTVlZDg0YTRiNWNkYTBhZGJiY2Q5MGY1NTU1OSJ9fX0=";
     private static final Set<String> DEFAULT_IDS = Set.of("golden_head", "instant_golden_head", "custom_golden_apple");
     private static final Set<String> DEFAULT_RECIPES = Set.of("golden_head", "light_apple", "enchanted_golden_apple");
+    private static final Map<Character, Material> LEGEND = Map.of('G', Material.GOLD_INGOT, 'H', Material.PLAYER_HEAD,
+            'A', Material.APPLE, 'B', Material.GOLD_BLOCK, 'P', Material.GOLDEN_APPLE);
 
     private final List<String> lines = new ArrayList<>();
     private boolean failed;
@@ -79,15 +89,29 @@ public final class SmokeTestPlugin extends JavaPlugin implements Listener {
     }
 
     private void runAndShutdown() {
+        guarded(this::runChecks);
+        // Block edits belong to the region that owns the blocks (on Folia a different thread),
+        // so the head pole check runs there and finishes the run afterwards.
+        World world = getServer().getWorlds().getFirst();
+        getServer().getRegionScheduler().run(this, world.getSpawnLocation(), task -> {
+            guarded(() -> checkHeadPole(world));
+            writeResult();
+            getServer().shutdown();
+        });
+    }
+
+    private interface Check {
+        void run() throws Exception;
+    }
+
+    private void guarded(Check check) {
         try {
-            runChecks();
+            check.run();
         } catch (Throwable t) {
             StringWriter trace = new StringWriter();
             t.printStackTrace(new PrintWriter(trace));
             fail("unexpected exception: " + trace);
         }
-        writeResult();
-        getServer().shutdown();
     }
 
     private void runChecks() throws Exception {
@@ -216,12 +240,10 @@ public final class SmokeTestPlugin extends JavaPlugin implements Listener {
         }
         expect(getServer().getRecipe(key("instant_golden_head")) == null, "disabled instant_golden_head recipe not registered");
 
-        Map<Character, Material> legend = Map.of('G', Material.GOLD_INGOT, 'H', Material.PLAYER_HEAD,
-                'A', Material.APPLE, 'B', Material.GOLD_BLOCK, 'P', Material.GOLDEN_APPLE);
-        expectCrafts(grid(legend, "GGG", "GHG", "GGG"), "rgoldenheads:golden_head");
-        expectCrafts(grid(legend, " G ", "GAG", " G "), "rgoldenheads:light_apple");
-        expectCrafts(grid(legend, "BBB", "BPB", "BBB"), "rgoldenheads:enchanted_golden_apple");
-        expectCrafts(grid(legend, "GGG", "GAG", "GGG"), "minecraft:golden_apple");
+        expectCrafts(grid(LEGEND, "GGG", "GHG", "GGG"), "rgoldenheads:golden_head");
+        expectCrafts(grid(LEGEND, " G ", "GAG", " G "), "rgoldenheads:light_apple");
+        expectCrafts(grid(LEGEND, "BBB", "BPB", "BBB"), "rgoldenheads:enchanted_golden_apple");
+        expectCrafts(grid(LEGEND, "GGG", "GAG", "GGG"), "minecraft:golden_apple");
 
         ConsumableRegistry registry = plugin.registry();
         RecipeSpec head = recipes.byKey(key("golden_head"));
@@ -237,9 +259,9 @@ public final class SmokeTestPlugin extends JavaPlugin implements Listener {
                 "enchanted_golden_apple makes the vanilla item");
 
         if (enchanted != null) {
-            ItemStack[] plain = grid(legend, "BBB", "BPB", "BBB");
+            ItemStack[] plain = grid(LEGEND, "BBB", "BPB", "BBB");
             expect(RecipeManager.allows(enchanted, plain), "guard: plain golden apple accepted");
-            ItemStack[] custom = grid(legend, "BBB", "BPB", "BBB");
+            ItemStack[] custom = grid(LEGEND, "BBB", "BPB", "BBB");
             custom[4] = ItemBuilder.build(registry.byId("custom_golden_apple"));
             expect(!RecipeManager.allows(enchanted, custom), "guard: Custom Golden Apple rejected as a plain golden apple");
         }
@@ -251,6 +273,34 @@ public final class SmokeTestPlugin extends JavaPlugin implements Listener {
         ResolvableProfile profile = head.getData(DataComponentTypes.PROFILE);
         expect(head.getType() == Material.PLAYER_HEAD && profile != null && "Steve".equals(profile.name()),
                 "dropped head carries the player's profile");
+    }
+
+    private void checkHeadPole(World world) {
+        PlayerProfile profile = getServer().createProfile(UUID.fromString("8667ba71-b85a-4004-af54-457a9734eed7"), "Steve");
+        Location spot = world.getSpawnLocation().toBlockLocation().add(0, 10, 0);
+        spot.setYaw(90.0f); // looking west
+
+        expect(HeadPole.place(spot, profile, Material.NETHER_BRICK_FENCE), "head pole placed in open air");
+        Block pole = spot.getBlock();
+        Block head = pole.getRelative(BlockFace.UP);
+        expect(pole.getType() == Material.NETHER_BRICK_FENCE, "pole block is the configured fence");
+        expect(head.getType() == Material.PLAYER_HEAD && head.getState() instanceof Skull skull
+                        && skull.getPlayerProfile() != null && "Steve".equals(skull.getPlayerProfile().getName()),
+                "head block carries the player's profile");
+        expect(head.getBlockData() instanceof Rotatable rotatable && rotatable.getRotation() == BlockFace.WEST,
+                "head faces the way the player looked");
+
+        ItemStack drop = head.getDrops().stream().findFirst().orElse(null);
+        ResolvableProfile dropProfile = drop == null ? null : drop.getData(DataComponentTypes.PROFILE);
+        expect(drop != null && drop.getType() == Material.PLAYER_HEAD && dropProfile != null
+                && "Steve".equals(dropProfile.name()), "breaking the head drops the skinned head");
+        head.setType(Material.AIR);
+        pole.setType(Material.AIR);
+
+        // The flat world's bottom four layers are solid, so there's no room anywhere it looks
+        Location buried = spot.clone();
+        buried.setY(world.getMinHeight());
+        expect(!HeadPole.place(buried, profile, Material.NETHER_BRICK_FENCE), "no room: no pole, head drops instead");
     }
 
     private void expectCrafts(ItemStack[] grid, String expected) {
@@ -306,10 +356,13 @@ public final class SmokeTestPlugin extends JavaPlugin implements Listener {
                     "ingredients", Map.of("X", "stick")));
             yaml.set("recipes.uses_head", Map.of("result", "rgoldenheads:custom_golden_apple", "shapeless", true,
                     "ingredients", List.of("rgoldenheads:golden_head", "stick")));
+            yaml.set("disabled-vanilla-recipes", List.of("golden_apple", "not_a_recipe", "other:thing"));
             yaml.save(config.toFile());
 
             expect(plugin.reloadAll(), "reload with broken entries succeeds");
             checkBrokenRecipes(plugin);
+            expectCrafts(goldenAppleGrid(), "null");
+            expectCrafts(grid(LEGEND, " G ", "GAG", " G "), "rgoldenheads:light_apple");
             ConsumableRegistry registry = plugin.registry();
             expect(registry.ids().containsAll(DEFAULT_IDS), "good items survive a broken config");
             expect(registry.byId("broken_material") == null, "bad material: item skipped");
@@ -337,6 +390,11 @@ public final class SmokeTestPlugin extends JavaPlugin implements Listener {
         expect(plugin.reloadAll() && plugin.registry().ids().equals(DEFAULT_IDS), "restored config reloads cleanly");
         expect(recipeIds(plugin).equals(DEFAULT_RECIPES) && getServer().getRecipe(key("uses_head")) == null,
                 "restored config leaves exactly the default recipes: " + recipeIds(plugin));
+        expectCrafts(goldenAppleGrid(), "minecraft:golden_apple");
+    }
+
+    private static ItemStack[] goldenAppleGrid() {
+        return grid(LEGEND, "GGG", "GAG", "GGG");
     }
 
     private void checkBrokenRecipes(RGoldenHeadsPlugin plugin) {

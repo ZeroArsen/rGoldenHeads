@@ -41,12 +41,25 @@ player-heads:
   drop-on-death: false
   # true = only when another player made the kill; deaths to lava, falls or mobs drop nothing
   only-player-kills: false
+  # The classic UHC head pole: instead of dropping, the head is set on a post where the player
+  # died. Breaking the head gives the skinned head item. When there's no room (e.g. the player
+  # died inside a wall), the head drops as an item instead. Region protection is not checked.
+  head-pole:
+    enabled: false
+    # Any block; a nether brick fence is the traditional look
+    pole: nether_brick_fence
 
 # Unlock every recipe below in players' recipe books when they join (and after a reload), so
 # they can see and click-craft them. Recipes with a permission are only shown to players who
 # have it.
 recipe-book:
   unlock-on-join: true
+
+# Vanilla recipes to switch off, by id (see the recipe's name on the Minecraft wiki). For
+# example, golden_apple removes the 8-ingot golden apple recipe, so the Light Apple below is
+# the only way to craft one. Remove an id and reload to bring the recipe back.
+disabled-vanilla-recipes:
+#  - golden_apple
 
 
 # ---------------------------------------------------------------------------
@@ -290,7 +303,8 @@ recipes:
       G: gold_ingot
       H: player_head
 
-  # Light Apple: a normal golden apple for half the gold. The vanilla 8-ingot recipe still works.
+  # Light Apple: a normal golden apple for half the gold. The vanilla 8-ingot recipe still works
+  # unless you add golden_apple to disabled-vanilla-recipes above.
   light_apple:
     enabled: true
     result: golden_apple

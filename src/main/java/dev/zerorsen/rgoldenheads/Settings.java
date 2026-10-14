@@ -1,5 +1,6 @@
 package dev.zerorsen.rgoldenheads;
 
+import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -10,6 +11,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 public final class Settings {
 
     private static final int EXPECTED_CONFIG_VERSION = 2;
+    private static final Material DEFAULT_POLE = Material.NETHER_BRICK_FENCE;
 
     private final JavaPlugin plugin;
 
@@ -19,6 +21,8 @@ public final class Settings {
     private volatile boolean dropHeads = false;
     private volatile boolean onlyPlayerKills = false;
     private volatile boolean unlockRecipes = true;
+    private volatile boolean headPole = false;
+    private volatile Material poleMaterial = DEFAULT_POLE;
 
     public Settings(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -44,6 +48,21 @@ public final class Settings {
         this.dropHeads = config.getBoolean("player-heads.drop-on-death", false);
         this.onlyPlayerKills = config.getBoolean("player-heads.only-player-kills", false);
         this.unlockRecipes = config.getBoolean("recipe-book.unlock-on-join", true);
+        this.headPole = config.getBoolean("player-heads.head-pole.enabled", false);
+        this.poleMaterial = poleMaterial(config.getString("player-heads.head-pole.pole"));
+    }
+
+    private Material poleMaterial(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return DEFAULT_POLE;
+        }
+        Material material = Material.matchMaterial(raw.trim());
+        if (material == null || material.isLegacy() || material.isAir() || !material.isBlock()) {
+            plugin.getLogger().warning("player-heads.head-pole.pole '" + raw + "' is not a placeable block; using "
+                    + DEFAULT_POLE.getKey().getKey() + ".");
+            return DEFAULT_POLE;
+        }
+        return material;
     }
 
     public boolean debug() {
@@ -68,5 +87,13 @@ public final class Settings {
 
     public boolean unlockRecipes() {
         return unlockRecipes;
+    }
+
+    public boolean headPole() {
+        return headPole;
+    }
+
+    public Material poleMaterial() {
+        return poleMaterial;
     }
 }

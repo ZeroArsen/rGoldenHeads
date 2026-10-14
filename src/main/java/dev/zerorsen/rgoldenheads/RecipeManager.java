@@ -39,6 +39,9 @@ public final class RecipeManager implements Listener {
     private final Settings settings;
 
     private volatile Map<NamespacedKey, RecipeSpec> active = Map.of();
+    // Vanilla recipes taken out by disabled-vanilla-recipes, kept so they can be put back.
+    // Only touched by swap() and unregisterAll(), which never run concurrently.
+    private final Map<NamespacedKey, Recipe> removedVanilla = new LinkedHashMap<>();
 
     public RecipeManager(Plugin plugin, ConsumableRegistry items, Settings settings) {
         this.plugin = plugin;
@@ -46,21 +49,27 @@ public final class RecipeManager implements Listener {
         this.settings = settings;
     }
 
-    /** Replaces every registered recipe with these. On Folia this happens on the global region thread. */
-    public void apply(List<RecipeSpec> specs) {
+    /**
+     * Replaces every registered recipe with these, and switches off exactly the listed vanilla
+     * recipes (restoring any that are no longer listed). On Folia this happens on the global
+     * region thread.
+     */
+    public void apply(List<RecipeSpec> specs, List<NamespacedKey> disabledVanilla) {
         Server server = plugin.getServer();
         if (server.isGlobalTickThread()) {
-            swap(specs);
+            swap(specs, disabledVanilla);
         } else {
-            server.getGlobalRegionScheduler().execute(plugin, () -> swap(specs));
+            server.getGlobalRegionScheduler().execute(plugin, () -> swap(specs, disabledVanilla));
         }
     }
 
-    /** Removes every recipe this plugin registered. */
+    /** Removes every recipe this plugin registered and puts back the vanilla ones it removed. */
     public void unregisterAll() {
         Server server = plugin.getServer();
         active.keySet().forEach(key -> server.removeRecipe(key, false));
         active = Map.of();
+        removedVanilla.values().forEach(recipe -> server.addRecipe(recipe, false));
+        removedVanilla.clear();
     }
 
     /** The registered recipes. Public for the smoke-test harness; not a supported API. */
@@ -88,9 +97,10 @@ public final class RecipeManager implements Listener {
         return found.equals(spec.requiredPluginItems());
     }
 
-    private void swap(List<RecipeSpec> specs) {
+    private void swap(List<RecipeSpec> specs, List<NamespacedKey> disabledVanilla) {
         Server server = plugin.getServer();
         active.keySet().forEach(key -> server.removeRecipe(key, false));
+        swapVanilla(server, disabledVanilla);
 
         Map<NamespacedKey, RecipeSpec> next = new LinkedHashMap<>();
         for (RecipeSpec spec : specs) {
@@ -120,6 +130,29 @@ public final class RecipeManager implements Listener {
             for (Player player : server.getOnlinePlayers()) {
                 player.getScheduler().run(plugin, task -> unlockRecipes(player), null);
             }
+        }
+    }
+
+    private void swapVanilla(Server server, List<NamespacedKey> disabled) {
+        removedVanilla.entrySet().removeIf(entry -> {
+            if (disabled.contains(entry.getKey())) {
+                return false;
+            }
+            server.addRecipe(entry.getValue(), false);
+            return true;
+        });
+        for (NamespacedKey key : disabled) {
+            if (removedVanilla.containsKey(key)) {
+                continue;
+            }
+            Recipe recipe = server.getRecipe(key);
+            if (recipe == null) {
+                plugin.getLogger().warning("disabled-vanilla-recipes: '" + key.getKey()
+                        + "' is not a recipe on this server, so it was ignored.");
+                continue;
+            }
+            removedVanilla.put(key, recipe);
+            server.removeRecipe(key, false);
         }
     }
 

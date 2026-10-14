@@ -77,7 +77,7 @@ public final class ItemBuilder {
 
     /** The item's configured ID, or null when it was not made by this plugin. */
     public static String idOf(ItemStack item) {
-        if (item == null) {
+        if (item == null || item.getType().isAir()) {
             return null;
         }
         return item.getPersistentDataContainer().get(ITEM_ID_KEY, PersistentDataType.STRING);

@@ -237,8 +237,8 @@ public final class ConsumableLoader {
             log.warning(path + " is missing the required key 'material'. Item skipped.");
             return null;
         }
-        Material material = Material.matchMaterial(raw);
-        if (material == null || material.isLegacy() || material.isAir() || !material.isItem()) {
+        Material material = Ingredient.itemMaterial(raw);
+        if (material == null) {
             log.warning(path + ".material '" + raw + "' is not a valid item material. Item skipped.");
             return null;
         }

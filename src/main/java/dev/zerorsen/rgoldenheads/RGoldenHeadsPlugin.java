@@ -22,6 +22,7 @@ public final class RGoldenHeadsPlugin extends JavaPlugin {
     private final Settings settings = new Settings(this);
     private final Messages messages = new Messages(this);
     private final ItemGiver giver = new ItemGiver(this, settings, messages);
+    private final RecipeManager recipes = new RecipeManager(this, registry, settings);
     private final List<String> ownedPermissions = new ArrayList<>();
 
     // The items the command tree was built from. Null until startup finishes, so the first
@@ -54,9 +55,13 @@ public final class RGoldenHeadsPlugin extends JavaPlugin {
             }
         });
 
+        PluginManager pluginManager = getServer().getPluginManager();
+        pluginManager.registerEvents(recipes, this);
+        pluginManager.registerEvents(new PlayerHeadDrops(settings), this);
+
         if (settings.updateChecker()) {
             UpdateChecker updateChecker = new UpdateChecker(this, settings, messages);
-            getServer().getPluginManager().registerEvents(updateChecker, this);
+            pluginManager.registerEvents(updateChecker, this);
             updateChecker.checkAsync();
         }
 
@@ -65,6 +70,8 @@ public final class RGoldenHeadsPlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        recipes.unregisterAll();
+
         // Otherwise the dynamic nodes pile up when a plugin manager reloads us in place
         PluginManager pluginManager = getServer().getPluginManager();
         ownedPermissions.forEach(pluginManager::removePermission);
@@ -74,6 +81,11 @@ public final class RGoldenHeadsPlugin extends JavaPlugin {
     /** The live item set. Public for the smoke-test harness; not a supported API. */
     public ConsumableRegistry registry() {
         return registry;
+    }
+
+    /** The live recipe set. Public for the smoke-test harness; not a supported API. */
+    public RecipeManager recipes() {
+        return recipes;
     }
 
     /** Returns false and keeps the previously loaded items when the new config is unusable. */
@@ -94,6 +106,8 @@ public final class RGoldenHeadsPlugin extends JavaPlugin {
         messages.load();
         Map<String, HeadSkins.HeadSkin> skins = HeadSkins.load(config.getConfigurationSection("head-skins"), getLogger());
         registry.replaceAll(ConsumableLoader.load(items, skins, getLogger(), settings.debug()));
+        // After the items: recipe results and plugin-item ingredients are looked up in the registry
+        recipes.apply(RecipeLoader.load(config.getConfigurationSection("recipes"), registry, getLogger(), settings.debug()));
 
         Set<String> registered = commandIds;
         if (registered != null) {

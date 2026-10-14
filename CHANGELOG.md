@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.3.0
+
+### Added
+- **Head poles** (`player-heads.head-pole`): instead of dropping, a dead player's head is set
+  on a post where they died, the classic UHC look. Breaking it drops the skinned head, ready
+  to craft. The post is any block (nether brick fence by default). When there's no room, the
+  head drops as an item instead.
+- **`disabled-vanilla-recipes`**: switch off vanilla recipes by id. For example, `golden_apple`
+  removes the 8-ingot golden apple so the Light Apple is the only way to craft one. Removing
+  an id and reloading brings the recipe back.
+
+Both are off by default, so existing configs behave exactly as before.
+
 ## 2.2.0
 
 ### Added

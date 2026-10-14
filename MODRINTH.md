@@ -1,7 +1,7 @@
 # rGoldenHeads
 
-Golden Heads, Light Apples and UHC-style crafting for modern Paper, compatible with MCPvP and
-ShieldlessUHC. Every item and recipe is configurable.
+Golden Heads, Light Apples, enchanted apple crafting, head drops and head poles for UHC on
+Paper and Folia. Compatible with MCPvP and ShieldlessUHC. Fully configurable.
 
 The healing kit that defines UHC and tiering PvP: an edible player head that trades an
 inventory slot for burst regeneration and absorption, cheap Light Apples, and the classic
@@ -30,6 +30,10 @@ All three are edible on a full hunger bar and restore no hunger or saturation.
 
 - **Optional head drops:** dying players drop their own skinned head, ready to craft. Every
   death, or PvP kills only.
+- **Head poles:** or set the head on a nether brick fence where the player died, classic
+  UHC style. Break it to collect the head.
+- **Switch off vanilla recipes:** e.g. remove the 8-ingot golden apple so the Light Apple is
+  the only way to craft one.
 - **Every recipe is yours to change:** shape, ingredients, result, amount, shaped or
   shapeless, item tags, your own plugin items as ingredients, and an optional permission.
 - **Recipe book support:** recipes are unlocked automatically and click-to-craft. Crafters

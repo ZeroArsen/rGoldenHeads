@@ -1,7 +1,7 @@
 # rGoldenHeads
 
 The UHC healing kit for Paper and Folia **1.21.4 – 26.3**: Golden Heads, Light Apples,
-UHC-style crafting and player head drops, compatible with MCPvP and ShieldlessUHC.
+UHC-style crafting, player head drops and head poles, compatible with MCPvP and ShieldlessUHC.
 
 Every item and every recipe is a config entry. You choose an item's material, skin, name,
 lore, eating speed, cooldown and potion effects, and the plugin registers a command for it.
@@ -53,7 +53,8 @@ right-clicking a block would place it instead of eating it.
 | `light_apple` | an apple with a gold ingot on each side (4 in a plus) | a normal golden apple | on |
 | `enchanted_golden_apple` | a golden apple surrounded by 8 gold blocks | the vanilla Enchanted Golden Apple | on |
 
-The vanilla 8-ingot golden apple recipe keeps working next to the Light Apple. Recipes are
+The vanilla 8-ingot golden apple recipe keeps working next to the Light Apple, unless you
+switch it off (see [Disabling vanilla recipes](#disabling-vanilla-recipes)). Recipes are
 unlocked in players' recipe books, work in crafters, and can be added, changed or removed
 with `/rgoldenheads reload`; no restart needed.
 
@@ -106,16 +107,37 @@ Grids that collide (with each other or with a vanilla recipe) are reported in th
 load. A recipe with a `permission` can't be crafted in a crafter, which has no player to
 check it against.
 
+### Disabling vanilla recipes
+
+```yaml
+disabled-vanilla-recipes:
+  - golden_apple   # the 8-ingot golden apple; the Light Apple becomes the only way to craft one
+```
+
+Any vanilla recipe id works (the `minecraft:` prefix is optional). Remove an id and run
+`/rgoldenheads reload` to bring the recipe back, and every removed recipe is restored when the
+plugin is disabled. Unknown ids are reported in the console.
+
 ## Player heads
 
 ```yaml
 player-heads:
   drop-on-death: false      # true = a dying player drops their own head, wearing their skin
   only-player-kills: false  # true = only when another player made the kill
+  head-pole:
+    enabled: false          # true = set the head on a post instead of dropping it
+    pole: nether_brick_fence
 ```
 
 The dropped head is a real player head named after the player, ready to craft into a Golden
 Head. With `keepInventory` on, the head still drops.
+
+With **`head-pole`** on, you get the classic UHC head pole instead: the head is placed on a
+post (any block, a nether brick fence by default) where the player died, facing the way they
+were looking. Breaking it drops the skinned head, ready to craft. If there's no room within a
+few blocks above the death spot (e.g. the player died inside a wall), or the spot is outside
+the world, the head drops as an item instead. Region protection isn't checked: like every UHC
+plugin, it places the pole where the player died.
 
 ## Head skins
 
@@ -165,6 +187,9 @@ as soon as it contains an `&` colour code; otherwise it is parsed as MiniMessage
 | `head-skins.*` | none | Your own named skins, on top of the built-in `modern` and `classic`. |
 | `player-heads.drop-on-death` | `false` | Dying players drop their own head. See [Player heads](#player-heads). |
 | `player-heads.only-player-kills` | `false` | Limit head drops to PvP kills. |
+| `player-heads.head-pole.enabled` | `false` | Set the head on a post instead of dropping it. |
+| `player-heads.head-pole.pole` | `nether_brick_fence` | The block the head sits on. |
+| `disabled-vanilla-recipes` | none | Vanilla recipe ids to switch off, e.g. `golden_apple`. |
 | `recipe-book.unlock-on-join` | `true` | Shows the recipes a player may craft in their recipe book. |
 | `recipes.*` | four recipes | See [Crafting](#crafting). |
 
@@ -328,6 +353,10 @@ versions, one after another. Each run loads the plugin next to a small test plug
   golden apple recipe still works;
 - plugin items and plain materials can't stand in for each other in a recipe;
 - a dropped player head carries the player's profile;
+- a head pole builds the post and a correctly facing head, breaking that head drops the
+  skinned head, and a spot with no room falls back to a drop;
+- disabling the vanilla golden apple recipe stops it, leaves the Light Apple working, and a
+  reload brings it back;
 - a deliberately broken config is contained: bad items and recipes are skipped, the good
   ones survive, and a reload leaves no stale recipes behind.
 
@@ -362,6 +391,10 @@ The smoke tests can't see the client or eat anything. Before a release, on at le
     `only-player-kills: true` stops that.
 11. Editing a recipe and running `/rgoldenheads reload` applies without a restart.
 12. A crafter crafts a Light Apple.
+13. With `head-pole` on, `/kill` builds a pole; breaking the head gives your skinned head, and
+    dying in a 1-block gap or in water behaves sensibly.
+14. `disabled-vanilla-recipes: [golden_apple]` plus a reload stops the 8-ingot craft while the
+    Light Apple still works; removing it and reloading brings it back.
 
 ## Credits
 

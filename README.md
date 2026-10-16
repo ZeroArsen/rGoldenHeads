@@ -218,7 +218,8 @@ Only `command` and `material` are required.
 | `head-texture` | unset | A raw base64 skin blob instead of a named skin. Wins over `head-skin`. |
 | `head-uuid` | derived | With `head-texture`. Leave it out; a stable UUID is derived from the texture so identical items stack. |
 | `glint` | vanilla | Force the enchantment shimmer on or off. |
-| `amount` | `1` | How many per command, up to the material's stack size. |
+| `max-stack-size` | material's own | How many fit in one slot, 1–99, e.g. `16` for Golden Heads that stack to 16. Items given before a change keep their old limit and won't stack with new ones. Ignored on items that take damage. |
+| `amount` | `1` | How many per command, up to the stack size. |
 | `instant` | `false` | `true` = swallowed with no eating animation at all. |
 | `eat-seconds` | `1.6` | Eating time. Vanilla food is `1.6`. Ignored when `instant` is true. |
 | `animation` | vanilla | `NONE`, `EAT`, `DRINK`, `BLOCK`, `BOW`, `TRIDENT`, `CROSSBOW`, `SPYGLASS`, `TOOT_HORN`, `BRUSH`, `BUNDLE`, `SPEAR`. `SPEAR` is the spear animation only on 1.21.11+; older servers show the trident one. |

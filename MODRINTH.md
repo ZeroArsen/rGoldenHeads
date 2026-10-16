@@ -47,7 +47,8 @@ All three are edible on a full hunger bar and restore no hunger or saturation.
 - **Two head skins built in.** `modern` is the default, and `classic` brings back the
   original look with one line (`head-skin: classic`). You can also add your own.
 - **Add your own items.** Define as many as you like; each gets its own command and permission.
-- **Tune everything:** name, lore, material, eating speed, cooldown, hunger values, effects.
+- **Tune everything:** name, lore, material, stack size, eating speed, cooldown, hunger
+  values, effects.
 - **Readable effects.** No amplifier off-by-one, no tick math:
 
   ```yaml

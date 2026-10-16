@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.4.0
+
+### Added
+- **`max-stack-size`** per item: how many fit in one inventory slot, from 1 to 99. For
+  example, `max-stack-size: 16` makes Golden Heads stack to 16 instead of 64. Leave it out to
+  keep the material's own stack size. Items given before a change keep their old limit and
+  won't stack with new ones.
+
+### Changed
+- An item's `amount`, a recipe's `amount` and the `/rgoldenheads give` limit all follow the
+  configured stack size.
+
 ## 2.3.0
 
 ### Added

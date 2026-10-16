@@ -42,6 +42,9 @@ public final class ItemBuilder {
                     .addProperty(new ProfileProperty("textures", spec.skinTexture()))
                     .build());
         }
+        if (spec.maxStackSize() != null) {
+            item.setData(DataComponentTypes.MAX_STACK_SIZE, spec.maxStackSize());
+        }
         if (spec.glint() != null) {
             item.setData(DataComponentTypes.ENCHANTMENT_GLINT_OVERRIDE, spec.glint());
         }

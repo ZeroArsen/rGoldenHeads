@@ -130,7 +130,7 @@ public final class RecipeLoader {
 
         String resultItemId = null;
         ItemStack vanillaResult = null;
-        Material resultMaterial;
+        int stackSize;
         String lowerResult = rawResult.trim().toLowerCase(Locale.ROOT);
         if (lowerResult.startsWith(Ingredient.PLUGIN_PREFIX)) {
             resultItemId = lowerResult.substring(Ingredient.PLUGIN_PREFIX.length());
@@ -140,27 +140,27 @@ public final class RecipeLoader {
                         + "or is disabled. Recipe skipped. Available: " + String.join(", ", items.ids()));
                 return null;
             }
-            resultMaterial = item.material();
+            stackSize = item.stackSize();
             if (s.isSet("display-name") || s.isSet("lore")) {
                 log.warning(path + " sets display-name or lore, which only apply to vanilla results. "
                         + "Change them on items." + resultItemId + " instead.");
             }
         } else {
-            resultMaterial = Ingredient.itemMaterial(rawResult);
+            Material resultMaterial = Ingredient.itemMaterial(rawResult);
             if (resultMaterial == null) {
                 log.warning(path + ".result '" + rawResult + "' is neither a vanilla item nor "
                         + Ingredient.PLUGIN_PREFIX + "<item id>. Recipe skipped.");
                 return null;
             }
             vanillaResult = vanillaResult(resultMaterial, s);
+            stackSize = resultMaterial.getMaxStackSize();
         }
 
         int amount = s.getInt("amount", 1);
-        int maxAmount = resultMaterial.getMaxStackSize();
-        if (amount < 1 || amount > maxAmount) {
-            log.warning(path + ".amount must be between 1 and " + maxAmount + "; using "
-                    + Math.clamp(amount, 1, maxAmount) + ".");
-            amount = Math.clamp(amount, 1, maxAmount);
+        if (amount < 1 || amount > stackSize) {
+            log.warning(path + ".amount must be between 1 and " + stackSize + "; using "
+                    + Math.clamp(amount, 1, stackSize) + ".");
+            amount = Math.clamp(amount, 1, stackSize);
         }
 
         String permission = s.getString("permission", "");

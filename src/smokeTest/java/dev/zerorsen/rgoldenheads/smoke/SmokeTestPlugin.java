@@ -5,6 +5,7 @@ import dev.zerorsen.rgoldenheads.ConsumableRegistry;
 import dev.zerorsen.rgoldenheads.ConsumableSpec;
 import dev.zerorsen.rgoldenheads.HeadPole;
 import dev.zerorsen.rgoldenheads.ItemBuilder;
+import dev.zerorsen.rgoldenheads.ItemGiver;
 import dev.zerorsen.rgoldenheads.PlayerHeadDrops;
 import dev.zerorsen.rgoldenheads.RecipeManager;
 import dev.zerorsen.rgoldenheads.RecipeSpec;
@@ -150,6 +151,7 @@ public final class SmokeTestPlugin extends JavaPlugin implements Listener {
 
         expect(id.equals(ItemBuilder.idOf(item)), id + ": PDC id written");
         expect(item.hasData(DataComponentTypes.FOOD), id + ": FOOD component set");
+        expect(item.getMaxStackSize() == spec.material().getMaxStackSize(), id + ": material's own stack size");
 
         Consumable consumable = item.getData(DataComponentTypes.CONSUMABLE);
         expect(consumable != null && consumable.consumeSeconds() == eatSeconds,
@@ -356,6 +358,12 @@ public final class SmokeTestPlugin extends JavaPlugin implements Listener {
                     "ingredients", Map.of("X", "stick")));
             yaml.set("recipes.uses_head", Map.of("result", "rgoldenheads:custom_golden_apple", "shapeless", true,
                     "ingredients", List.of("rgoldenheads:golden_head", "stick")));
+            yaml.set("items.stack16", Map.of("command", "stack16", "material", "GOLDEN_APPLE",
+                    "max-stack-size", 16, "amount", 20));
+            yaml.set("items.stack_too_big", Map.of("command", "stacktoobig", "material", "GOLDEN_APPLE",
+                    "max-stack-size", 100));
+            yaml.set("items.stack_sword", Map.of("command", "stacksword", "material", "DIAMOND_SWORD",
+                    "max-stack-size", 16));
             yaml.set("disabled-vanilla-recipes", List.of("golden_apple", "not_a_recipe", "other:thing"));
             yaml.save(config.toFile());
 
@@ -379,6 +387,19 @@ public final class SmokeTestPlugin extends JavaPlugin implements Listener {
             ConsumableSpec trident = registry.byId("trident_animation");
             expect(trident != null && trident.animation() != null,
                     "animation: TRIDENT resolves on this version (" + (trident == null ? null : trident.animation()) + ")");
+
+            ConsumableSpec stack16 = registry.byId("stack16");
+            ItemStack stack16Item = stack16 == null ? null : ItemBuilder.build(stack16);
+            expect(stack16Item != null && Integer.valueOf(16).equals(stack16Item.getData(DataComponentTypes.MAX_STACK_SIZE))
+                            && stack16Item.getMaxStackSize() == 16,
+                    "max-stack-size: 16 sets the stack limit (got " + (stack16Item == null ? null : stack16Item.getMaxStackSize()) + ")");
+            expect(stack16 != null && stack16.amount() == 16, "amount above max-stack-size is clamped to it");
+            expect(stack16 != null && ItemGiver.maxAmount(stack16) == 16 * 36, "give limit follows max-stack-size");
+            ConsumableSpec tooBig = registry.byId("stack_too_big");
+            expect(tooBig != null && tooBig.maxStackSize() == null, "max-stack-size above 99: ignored, item kept");
+            ConsumableSpec sword = registry.byId("stack_sword");
+            expect(sword != null && sword.maxStackSize() == null && ItemBuilder.build(sword).getMaxStackSize() == 1,
+                    "max-stack-size on a damageable item: ignored");
 
             for (ConsumableSpec spec : registry.all()) {
                 ItemBuilder.build(spec);

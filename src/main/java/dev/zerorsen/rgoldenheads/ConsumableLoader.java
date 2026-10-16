@@ -31,6 +31,7 @@ public final class ConsumableLoader {
     private static final int MIN_LEVEL = 1;
     private static final int MAX_LEVEL = 256;
     private static final float DEFAULT_EAT_SECONDS = 1.6f;
+    private static final int MAX_STACK_SIZE = 99;
     private static final Pattern VALID_LABEL = Pattern.compile("[a-z0-9_-]+");
 
     // Labels the plugin's own admin command owns; an item may not steal them.
@@ -169,10 +170,12 @@ public final class ConsumableLoader {
 
         Boolean glint = s.isSet("glint") ? s.getBoolean("glint") : null;
 
+        Integer maxStackSize = maxStackSize(s, material, path, log);
+
         int amount = s.getInt("amount", 1);
-        int maxAmount = material.getMaxStackSize();
+        int maxAmount = maxStackSize != null ? maxStackSize : material.getMaxStackSize();
         if (amount < 1 || amount > maxAmount) {
-            log.warning(path + ".amount must be between 1 and " + maxAmount + " for " + material
+            log.warning(path + ".amount must be between 1 and " + maxAmount + " (one stack) for this item"
                     + "; using " + Math.clamp(amount, 1, maxAmount) + ".");
             amount = Math.clamp(amount, 1, maxAmount);
         }
@@ -227,9 +230,29 @@ public final class ConsumableLoader {
 
         return new ConsumableSpec(id, command, List.copyOf(aliases), description, permission,
                 displayName, List.copyOf(lore), material, itemModel, skinUuid, skinTexture, glint,
-                amount, consumeSeconds, animation, consumeParticles, consumeSound,
+                maxStackSize, amount, consumeSeconds, animation, consumeParticles, consumeSound,
                 nutrition, saturation, canAlwaysEat, cooldownSeconds, cooldownGroup,
                 effectChance, List.copyOf(effects));
+    }
+
+    /** The configured stack size, or null to keep the material's own. */
+    private static Integer maxStackSize(ConfigurationSection s, Material material, String path, Logger log) {
+        if (!s.isSet("max-stack-size")) {
+            return null;
+        }
+        int size = s.getInt("max-stack-size");
+        if (size < 1 || size > MAX_STACK_SIZE) {
+            log.warning(path + ".max-stack-size must be between 1 and " + MAX_STACK_SIZE
+                    + ", so the material's own stack size is used.");
+            return null;
+        }
+        // The game refuses items that both stack and take damage
+        if (size > 1 && material.getMaxDurability() > 0) {
+            log.warning(path + ".max-stack-size can't be above 1 for " + material
+                    + ", which takes damage, so it was ignored.");
+            return null;
+        }
+        return size;
     }
 
     private static Material material(String raw, String path, Logger log) {

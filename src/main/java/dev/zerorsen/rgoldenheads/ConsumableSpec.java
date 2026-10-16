@@ -28,6 +28,7 @@ public record ConsumableSpec(
         UUID skinUuid,                  // non-null whenever skinTexture is set
         String skinTexture,             // optional
         Boolean glint,                  // optional tri-state; null = vanilla default
+        Integer maxStackSize,           // optional; null = the material's own stack size
         int amount,
         float consumeSeconds,
         ItemUseAnimation animation,     // optional
@@ -43,6 +44,11 @@ public record ConsumableSpec(
 ) {
 
     public static final String NAMESPACE = "rgoldenheads";
+
+    /** How many of this item fit in one slot. */
+    public int stackSize() {
+        return maxStackSize != null ? maxStackSize : material.getMaxStackSize();
+    }
 
     /** Per-item marker, kept because items handed out by 1.x carry only this key. */
     public NamespacedKey itemTag() {

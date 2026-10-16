@@ -28,7 +28,7 @@ public final class ItemGiver {
 
     /** The most of {@code spec}'s item a single give may hand out. */
     public static int maxAmount(ConsumableSpec spec) {
-        return spec.material().getMaxStackSize() * MAX_STACKS;
+        return spec.stackSize() * MAX_STACKS;
     }
 
     /**

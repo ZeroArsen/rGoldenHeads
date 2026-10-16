@@ -131,7 +131,10 @@ head-skins:
 #                     from the texture, which is what you want in almost every case
 #   glint             true/false to force the enchantment shimmer on or off.
 #                     Omit entirely to leave it at the vanilla default
-#   amount            how many are given per command. 1 to the material's stack size. Default: 1
+#   max-stack-size    how many fit in one inventory slot, 1 to 99. Default: the material's own
+#                     (64 for golden carrots and apples). Items given before you change it keep
+#                     their old limit and won't stack with new ones
+#   amount            how many are given per command. 1 to the stack size. Default: 1
 #   instant           true = swallowed with no eating animation at all. Default: false
 #   eat-seconds       how long eating takes. Vanilla food is 1.6. Ignored when instant is true
 #   animation         NONE, EAT, DRINK, BLOCK, BOW, TRIDENT, CROSSBOW, SPYGLASS, TOOT_HORN,
@@ -167,6 +170,8 @@ items:
     material: GOLDEN_CARROT
     item-model: minecraft:player_head
     head-skin: modern
+    # Uncomment to make Golden Heads stack to 16 instead of 64
+    # max-stack-size: 16
     eat-seconds: 1.0
     nutrition: 0
     saturation: 0.0
